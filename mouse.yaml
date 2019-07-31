@@ -1,0 +1,36 @@
+- device: mouse
+  motion: Button.left
+  motion time: 0.1
+  position_x: 673
+  position_y: 1064
+  pressed: true
+- device: mouse
+  motion: Button.left
+  motion time: 0.08613801002502441
+  position_x: 673
+  position_y: 1064
+  pressed: false
+- device: mouse
+  motion: Button.left
+  motion time: 1.2061982154846191
+  position_x: 725
+  position_y: 161
+  pressed: true
+- device: mouse
+  motion: Button.left
+  motion time: 0.5156147480010986
+  position_x: 525
+  position_y: 193
+  pressed: false
+- device: mouse
+  motion: Button.left
+  motion time: 0.7742481231689453
+  position_x: 522
+  position_y: 195
+  pressed: true
+- device: mouse
+  motion: Button.left
+  motion time: 0.4319324493408203
+  position_x: 492
+  position_y: 98
+  pressed: false
