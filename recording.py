@@ -101,13 +101,13 @@ class KeyBoardMonitoring(Thread):
 class MouseMonitoring(Thread):
     def __init__(self, queue_loc, keyboard_control):
         super().__init__()
-        self._button_pressed = False
+        # self._button_pressed = False
         self._queue = queue_loc
         self._keyboard_control = keyboard_control
 
     def recoding(self, x, y, button, pressed, device):
 
-        assert (device in ["mouse", "mouse_move"])
+        assert (device in ["mouse", "mouse_move", "mouse_scroll"])
         now_time = time()
         mouse_info = {
             "device": device,
@@ -121,11 +121,11 @@ class MouseMonitoring(Thread):
         print(mouse_info)
 
     def on_move(self, x, y):
-        if self._button_pressed:
-            self.recoding(x, y, mouse.Button.left, False, "mouse_move")
+        # if self._button_pressed:
+        self.recoding(x, y, mouse.Button.left, False, "mouse_move")
 
     def on_click(self, x, y, button, pressed):
-        self._button_pressed = pressed
+        # self._button_pressed = pressed
         if button == mouse.Button.middle:
             # Stop listener
             self._queue.put(None)
@@ -135,9 +135,9 @@ class MouseMonitoring(Thread):
             return False
         self.recoding(x, y, button, pressed, "mouse")
 
-    @staticmethod
-    def on_scroll(x, y, dx, dy):
-        pass
+    def on_scroll(self, x, y, dx, dy):
+        print(x, y)
+        self.recoding(dx, dy, mouse.Button.left, False, "mouse_scroll")
 
     def run(self):
         # Collect events until released
@@ -177,8 +177,10 @@ class Recording(Thread):
                 motion_time = (info_list[list_len - i]["motion time"] -
                                info_list[list_len - i - 1]["motion time"])
                 info_list[list_len - i]["motion time"] = motion_time
-            info_list[0]["motion time"] = 0.1
-            yaml.safe_dump(info_list, f)
+
+            if info_list:
+                info_list[0]["motion time"] = 0.1
+                yaml.safe_dump(info_list, f)
 
 
 if __name__ == '__main__':

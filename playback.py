@@ -20,6 +20,7 @@ from pynput.keyboard import Key
 from pynput import mouse
 from pynput import keyboard
 
+
 from time import sleep
 
 
@@ -59,7 +60,23 @@ class MoveMotion(Motion):
                 motion["position_y"]))
         assert isinstance(self.device, mouse.Controller)
         self.device.position = (motion["position_x"], motion["position_y"])
-        sleep(0.01)
+
+
+class ScrollMotion(Motion):
+    def do(self, motion):
+        assert isinstance(self.device, mouse.Controller)
+        assert motion["device"] == "mouse_scroll"
+        assert isinstance(motion["position_y"], int)
+
+        dx = motion["position_x"] * 120
+        dy = motion["position_y"] * 120
+
+        self.device.scroll(dx, dy)
+        print(
+            "{0}-scroll to ({1}, {2})".format(
+                motion["motion"],
+                motion["position_x"],
+                motion["position_y"]))
 
 
 class MousePress(PressMotion):
@@ -102,6 +119,12 @@ class MouseMove(MoveMotion):
         self.device = mouse.Controller()
 
 
+class MouseScroll(ScrollMotion):
+    def __init__(self):
+        super().__init__()
+        self.device = mouse.Controller()
+
+
 class KeyboardPress(PressMotion):
     def __init__(self):
         super().__init__()
@@ -129,7 +152,8 @@ class Unpacking(object):
         """
         assert isinstance(motion, dict)
         try:
-            assert motion["device"] in ["mouse", "keyboard", "mouse_move"]
+            assert motion["device"] in [
+                "mouse", "keyboard", "mouse_move", "mouse_scroll"]
             assert isinstance(motion["motion time"], float)
             assert isinstance(motion["position_x"], int)
             assert isinstance(motion["position_y"], int)
@@ -179,6 +203,8 @@ class MotionProduct(object):
                 return KeyboardRelease()
         elif motion["device"] == "mouse_move":
             return MouseMove()
+        elif motion["device"] == "mouse_scroll":
+            return MouseScroll()
 
 
 class PlayBack(Thread):
