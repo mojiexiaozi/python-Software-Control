@@ -101,25 +101,16 @@ class KeyBoardMonitoring(Thread):
 class MouseMonitoring(Thread):
     def __init__(self, queue_loc, keyboard_control):
         super().__init__()
+        self._button_pressed = False
         self._queue = queue_loc
         self._keyboard_control = keyboard_control
 
-    @staticmethod
-    def on_move(x, y):
-        pass
+    def recoding(self, x, y, button, pressed, device):
 
-    def on_click(self, x, y, button, pressed):
-        if button == mouse.Button.middle:
-            # Stop listener
-            self._queue.put(None)
-            self._keyboard_control.press(keyboard.Key.f8)
-            self._keyboard_control.release(keyboard.Key.f8)
-
-            return False
-
+        assert (device in ["mouse", "mouse_move"])
         now_time = time()
         mouse_info = {
-            "device": "mouse",
+            "device": device,
             "motion": str(button),
             "position_x": x,
             "position_y": y,
@@ -128,6 +119,21 @@ class MouseMonitoring(Thread):
 
         self._queue.put(mouse_info)
         print(mouse_info)
+
+    def on_move(self, x, y):
+        if self._button_pressed:
+            self.recoding(x, y, mouse.Button.left, False, "mouse_move")
+
+    def on_click(self, x, y, button, pressed):
+        self._button_pressed = pressed
+        if button == mouse.Button.middle:
+            # Stop listener
+            self._queue.put(None)
+            self._keyboard_control.press(keyboard.Key.f8)
+            self._keyboard_control.release(keyboard.Key.f8)
+
+            return False
+        self.recoding(x, y, button, pressed, "mouse")
 
     @staticmethod
     def on_scroll(x, y, dx, dy):

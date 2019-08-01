@@ -59,6 +59,7 @@ class MoveMotion(Motion):
                 motion["position_y"]))
         assert isinstance(self.device, mouse.Controller)
         self.device.position = (motion["position_x"], motion["position_y"])
+        sleep(0.01)
 
 
 class MousePress(PressMotion):
@@ -68,7 +69,7 @@ class MousePress(PressMotion):
 
     def do(self, motion):
         MouseMove().do(motion)
-        sleep(1)
+
         super().do(motion)
 
 
@@ -79,7 +80,7 @@ class MouseRelease(ReleaseMotion):
 
     def do(self, motion):
         MouseMove().do(motion)
-        sleep(1)
+
         super().do(motion)
 
 
@@ -91,7 +92,7 @@ class MouseClick(ClickMotion):
 
     def do(self, motion):
         MouseMove().do(motion)
-        sleep(1)
+
         super().do(motion)
 
 
@@ -128,7 +129,7 @@ class Unpacking(object):
         """
         assert isinstance(motion, dict)
         try:
-            assert motion["device"] in ["mouse", "keyboard"]
+            assert motion["device"] in ["mouse", "keyboard", "mouse_move"]
             assert isinstance(motion["motion time"], float)
             assert isinstance(motion["position_x"], int)
             assert isinstance(motion["position_y"], int)
@@ -176,6 +177,8 @@ class MotionProduct(object):
                 return KeyboardPress()
             else:
                 return KeyboardRelease()
+        elif motion["device"] == "mouse_move":
+            return MouseMove()
 
 
 class PlayBack(Thread):
