@@ -63,11 +63,11 @@ class KeyBoardMonitoring(Thread):
                 key_value = str(key)
 
             keyboard_info = {
-                "device": "keyboard",
+                "event_type": "keyboard",
                 "event": key_value,
                 "position_x": 0,
                 "position_y": 0,
-                "event time": now_time,
+                "event_time": now_time,
                 "pressed": press}
             self._queue.put(keyboard_info)
             print(keyboard_info)
@@ -105,16 +105,16 @@ class MouseMonitoring(Thread):
         self._queue = queue_loc
         self._keyboard_control = keyboard_control
 
-    def recoding(self, x, y, button, pressed, device):
+    def recoding(self, x, y, button, pressed, event_type):
 
-        assert (device in ["mouse", "mouse_move", "mouse_scroll"])
+        assert (event_type in ["mouse", "mouse_move", "mouse_scroll"])
         now_time = time()
         mouse_info = {
-            "device": device,
+            "event_type": event_type,
             "event": str(button),
             "position_x": x,
             "position_y": y,
-            "event time": now_time,
+            "event_time": now_time,
             "pressed": pressed}
 
         self._queue.put(mouse_info)
@@ -174,12 +174,12 @@ class Recording(Thread):
             list_len = len(info_list)
 
             for i in range(1, list_len):
-                event_time = (info_list[list_len - i]["event time"] -
-                               info_list[list_len - i - 1]["event time"])
-                info_list[list_len - i]["event time"] = event_time
+                event_time = (info_list[list_len - i]["event_time"] -
+                               info_list[list_len - i - 1]["event_time"])
+                info_list[list_len - i]["event_time"] = event_time
 
             if info_list:
-                info_list[0]["event time"] = 0.1
+                info_list[0]["event_time"] = 0.1
                 yaml.safe_dump(info_list, f)
 
 

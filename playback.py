@@ -26,7 +26,7 @@ from time import sleep
 
 class Event(object):
     def __init__(self):
-        self.device = None
+        self.event_type = None
 
     def do(self, event):
         assert isinstance(event, dict)
@@ -35,20 +35,20 @@ class Event(object):
 class PressEvent(Event):
     def do(self, event):
         print("{0}-press".format(event["event"]))
-        self.device.press(event["event"])
+        self.event_type.press(event["event"])
 
 
 class ReleaseEvent(Event):
     def do(self, event):
         print("{0}-release".format(event["event"]))
-        self.device.release(event["event"])
+        self.event_type.release(event["event"])
 
 
 class ClickEvent(Event):
     def do(self, event):
         print("{0}-click".format(event["event"]))
-        assert isinstance(self.device, mouse.Controller)
-        self.device.click(event["event"])
+        assert isinstance(self.event_type, mouse.Controller)
+        self.event_type.click(event["event"])
 
 
 class MoveEvent(Event):
@@ -58,20 +58,20 @@ class MoveEvent(Event):
                 event["event"],
                 event["position_x"],
                 event["position_y"]))
-        assert isinstance(self.device, mouse.Controller)
-        self.device.position = (event["position_x"], event["position_y"])
+        assert isinstance(self.event_type, mouse.Controller)
+        self.event_type.position = (event["position_x"], event["position_y"])
 
 
 class ScrollEvent(Event):
     def do(self, event):
-        assert isinstance(self.device, mouse.Controller)
-        assert event["device"] == "mouse_scroll"
+        assert isinstance(self.event_type, mouse.Controller)
+        assert event["event_type"] == "mouse_scroll"
         assert isinstance(event["position_y"], int)
 
         dx = event["position_x"] * 120
         dy = event["position_y"] * 120
 
-        self.device.scroll(dx, dy)
+        self.event_type.scroll(dx, dy)
         print(
             "{0}-scroll to ({1}, {2})".format(
                 event["event"],
@@ -82,7 +82,7 @@ class ScrollEvent(Event):
 class MousePress(PressEvent):
     def __init__(self):
         super().__init__()
-        self.device = mouse.Controller()
+        self.event_type = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -93,7 +93,7 @@ class MousePress(PressEvent):
 class MouseRelease(ReleaseEvent):
     def __init__(self):
         super().__init__()
-        self.device = mouse.Controller()
+        self.event_type = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -105,7 +105,7 @@ class MouseClick(ClickEvent):
 
     def __init__(self):
         super().__init__()
-        self.device = mouse.Controller()
+        self.event_type = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -116,25 +116,25 @@ class MouseClick(ClickEvent):
 class MouseMove(MoveEvent):
     def __init__(self):
         super().__init__()
-        self.device = mouse.Controller()
+        self.event_type = mouse.Controller()
 
 
 class MouseScroll(ScrollEvent):
     def __init__(self):
         super().__init__()
-        self.device = mouse.Controller()
+        self.event_type = mouse.Controller()
 
 
 class KeyboardPress(PressEvent):
     def __init__(self):
         super().__init__()
-        self.device = keyboard.Controller()
+        self.event_type = keyboard.Controller()
 
 
 class KeyboardRelease(ReleaseEvent):
     def __init__(self):
         super().__init__()
-        self.device = keyboard.Controller()
+        self.event_type = keyboard.Controller()
 
 
 class Unpacking(object):
@@ -142,19 +142,19 @@ class Unpacking(object):
     def unpacking(event):
         """
         :param {
-                "device": "mouse",
+                "event_type": "mouse",
                 "event": str(button),
                 "position_x": x,
                 "position_y": y,
-                "event time": now_time,
+                "event_time": now_time,
                 "pressed": pressed}
         :return: unpacking event
         """
         assert isinstance(event, dict)
         try:
-            assert event["device"] in [
+            assert event["event_type"] in [
                 "mouse", "keyboard", "mouse_move", "mouse_scroll"]
-            assert isinstance(event["event time"], float)
+            assert isinstance(event["event_time"], float)
             assert isinstance(event["position_x"], int)
             assert isinstance(event["position_y"], int)
             assert isinstance(event["pressed"], bool)
@@ -182,28 +182,28 @@ class EventProduct(object):
     def create(event):
         """
         :param event: {
-                "device": "mouse",
+                "event_type": "mouse",
                 "event": Key,
                 "position_x": 0,
                 "position_y": 0,
-                "event time": 0.1,
+                "event_time": 0.1,
                 "pressed": true}
         :return:
         """
         assert isinstance(event, dict)
-        if event["device"] == "mouse":
+        if event["event_type"] == "mouse":
             if event["pressed"]:
                 return MousePress()
             else:
                 return MouseRelease()
-        elif event["device"] == "keyboard":
+        elif event["event_type"] == "keyboard":
             if event["pressed"]:
                 return KeyboardPress()
             else:
                 return KeyboardRelease()
-        elif event["device"] == "mouse_move":
+        elif event["event_type"] == "mouse_move":
             return MouseMove()
-        elif event["device"] == "mouse_scroll":
+        elif event["event_type"] == "mouse_scroll":
             return MouseScroll()
 
 
@@ -223,7 +223,7 @@ class PlayBack(Thread):
         for event in events:
             now_event = Unpacking().unpacking(event)
             EventProduct().create(now_event).do(now_event)
-            sleep(now_event["event time"])
+            sleep(now_event["event_time"])
 
 
 if __name__ == '__main__':
