@@ -12,178 +12,300 @@
 """
 __author__ = 'Lyl'
 
-from pynput import mouse
 import yaml
 from queue import Queue
 from time import time
 from threading import Thread
-
-
+from pyautogui import getActiveWindow, onScreen
+from win32gui import GetClassName
+from pynput import mouse
 from pynput import keyboard
 
 
-class KeyBoardMonitoring(Thread):
-    def __init__(self, queue_loc, mouse_control):
+class Monitoring(Thread):
+    def __init__(self, queue):
         super().__init__()
-        self._queue = queue_loc
-        self._mouse_control = mouse_control
-        self._is_ctrl_pressed = False
-        self._is_shift_pressed = False
-        self._is_alt_pressed = False
-        self._is_recording = True
 
-    def recording(self, key, press):
-        if key == keyboard.Key.shift:
-            if self._is_shift_pressed:
-                self._is_recording = False
-            else:
-                self._is_recording = True
-                self._is_shift_pressed = press
-        elif key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r, keyboard.Key.alt_gr]:
-            if self._is_alt_pressed:
-                self._is_recording = False
-            else:
-                self._is_recording = True
-                self._is_alt_pressed = press
-        elif key in [keyboard.Key.ctrl, keyboard.Key.ctrl_l, keyboard.Key.ctrl_r]:
-            if self._is_ctrl_pressed:
-                self._is_recording = False
-            else:
-                self._is_recording = True
-                self._is_ctrl_pressed = press
+        assert isinstance(queue, Queue)
+        self._queue = queue
+
+    @property
+    def queue(self):
+        return self._queue
+
+    def run(self):
+        pass
+
+    @staticmethod
+    def add_window_to_event(event):
+        assert isinstance(event, dict)
+        window = getActiveWindow()
+        if window:
+            event["window"] = {
+                "title": window.title,
+                "class_name": GetClassName(window._hWnd),
+                "top": window.top,
+                "left": window.left,
+                "width": window.width,
+                "height": window.height}
         else:
-            self._is_recording = True
+            event["window"] = None
+        return event
 
-        if self._is_recording:
-            now_time = time()
-            try:
-                key_value = key.char
-            except AttributeError:
-                # print(e)s
-                key_value = str(key)
 
-            keyboard_info = {
-                "event_type": "keyboard",
-                "event": key_value,
-                "position_x": 0,
-                "position_y": 0,
-                "event_time": now_time,
-                "pressed": press}
-            self._queue.put(keyboard_info)
-            print(keyboard_info)
+class KeyBoardMonitoring(Monitoring):
+    @staticmethod
+    def key_to_string(key):
+        try:
+            key = key.char
 
-    def on_press(self, key):
-        self.recording(key, True)
+        except AttributeError:
+            key = str(key)
+        return key
 
-    def on_release(self, key):
-        if key in [
-                keyboard.Key.ctrl,
-                keyboard.Key.ctrl_l,
-                keyboard.Key.ctrl_r]:
-            self._is_ctrl_pressed = False
-        elif key == keyboard.Key.shift:
-            self._is_shift_pressed = False
-        elif key in [keyboard.Key.alt, keyboard.Key.alt_l, keyboard.Key.alt_r, keyboard.Key.alt_gr]:
-            self._is_alt_pressed = False
-        elif key == keyboard.Key.f8:
-            # Stop listener
-            self._mouse_control.click(mouse.Button.middle, 1)
+    def _on_press(self, key):
+        if key == keyboard.Key.f8:
+            self.queue.put("keyboard_monitor_quit")
             return False
 
-        self.recording(key, False)
+        key = self.key_to_string(key)
+        event = {"event_type": "keyboard_press",
+                 "event_key": key,
+                 "event_time": time()}
+        event = self.add_window_to_event(event)   # 添加窗口
+        self.queue.put(event)
 
-    # Collect events until released
+    def _on_release(self, key):
+        key = self.key_to_string(key)
+        event = {"event_type": "keyboard_release",
+                 "event_key": key,
+                 "event_time": time()}
+        event = self.add_window_to_event(event)   # 添加窗口
+        self.queue.put(event)
+
     def run(self):
-        with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
+        with keyboard.Listener(on_press=self._on_press, on_release=self._on_release) as listener:
             listener.join()
 
 
-class MouseMonitoring(Thread):
-    def __init__(self, queue_loc, keyboard_control):
-        super().__init__()
-        # self._button_pressed = False
-        self._queue = queue_loc
-        self._keyboard_control = keyboard_control
+class MouseMonitoring(Monitoring):
+    def _on_move(self, x, y):
+        event = {"event_type": "mouse_move",
+                 "position_x": x,
+                 "position_y": y,
+                 "event_time": time()}
+        event = self.add_window_to_event(event)   # 添加窗口
+        self._queue.put(event)
 
-    def recoding(self, x, y, button, pressed, event_type):
-
-        assert (event_type in ["mouse", "mouse_move", "mouse_scroll"])
-        now_time = time()
-        mouse_info = {
-            "event_type": event_type,
-            "event": str(button),
-            "position_x": x,
-            "position_y": y,
-            "event_time": now_time,
-            "pressed": pressed}
-
-        self._queue.put(mouse_info)
-        print(mouse_info)
-
-    def on_move(self, x, y):
-        # if self._button_pressed:
-        self.recoding(x, y, mouse.Button.left, False, "mouse_move")
-
-    def on_click(self, x, y, button, pressed):
-        # self._button_pressed = pressed
+    def _on_click(self, x, y, button, pressed):
         if button == mouse.Button.middle:
             # Stop listener
-            self._queue.put(None)
-            self._keyboard_control.press(keyboard.Key.f8)
-            self._keyboard_control.release(keyboard.Key.f8)
-
+            self._queue.put("mouse_monitor_quit")
             return False
-        self.recoding(x, y, button, pressed, "mouse")
 
-    def on_scroll(self, x, y, dx, dy):
-        print(x, y)
-        self.recoding(dx, dy, mouse.Button.left, False, "mouse_scroll")
+        event = {
+            "event_type": "mouse_{0}".format(
+                {
+                    True: "press",
+                    False: "release"}[pressed]),
+            "position_x": x,
+            "position_y": y,
+            "event_key": str(button),
+            "event_time": time()}
+        event = self.add_window_to_event(event)   # 添加窗口
+        self._queue.put(event)
+
+    def _on_scroll(self, x, y, dx, dy):
+        event = {"event_type": "mouse_scroll",
+                 "dx": dx,
+                 "dy": dy,
+                 "event_time": time()}
+        event = self.add_window_to_event(event)   # 添加窗口
+        self._queue.put(event)
 
     def run(self):
         # Collect events until released
-        with mouse.Listener(on_move=self.on_move, on_click=self.on_click, on_scroll=self.on_scroll) as listener:
+        with mouse.Listener(on_move=self._on_move, on_click=self._on_click, on_scroll=self._on_scroll) as listener:
             # listener.start()
             listener.join()
 
 
-class Recording(Thread):
+class Recording(object):
+    def __init__(self):
+        self.event_type = ""
+
+    def do(self, event):
+        assert event["event_type"] == self.event_type
+        assert isinstance(event["event_time"], time)
+        assert not KeyError(event["window"])
+
+
+class MouseMoveRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "mouse_move"
+
+    def do(self, event):
+        super().do(event)
+        assert onScreen(event["position_x"], event["position_y"])
+        return event
+
+
+class MouseClickPressRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "mouse_click_press"
+
+    def do(self, event):
+        super().do(event)
+        assert isinstance(event["event_key"], mouse.Button)
+        assert onScreen(event["position_x"], event["position_y"])
+        return event
+
+
+class MouseClickReleaseRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "mouse_click_release"
+
+    def do(self, event):
+        super().do(event)
+        assert isinstance(event["event_key"], mouse.Button)
+        assert onScreen(event["position_x"], event["position_y"])
+        return event
+
+
+class MouseScrollRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "mouse_scroll"
+
+    def do(self, event):
+        super().do(event)
+        assert isinstance(event["position_x"], int)
+        assert isinstance(event["position_y"], int)
+        return event
+
+
+class KeyboardReleaseRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "key_release"
+
+    def do(self, event):
+        super().do(event)
+        assert isinstance(event["event_key"], keyboard.Key)
+        return event
+
+
+class KeyboardPressRecording(Recording):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "key_press"
+
+    def do(self, event):
+        super().do(event)
+        assert event["event_type"] in ["key_press", "key_release"]
+        assert isinstance(event["event_key"], keyboard.Key)
+        return event
+
+
+class RecordingProduct(object):
+    @staticmethod
+    def create(event_type):
+        assert event_type in [
+            "mouse_move",
+            "mouse_press",
+            "mouse_release",
+            "mouse_scroll",
+            "keyboard_press",
+            "keyboard_release"]
+        if event_type == "mouse_move":
+            return MouseMoveRecording()
+        elif event_type == "mouse_press":
+            return MouseClickPressRecording()
+        elif event_type == "mouse_release":
+            return MouseClickReleaseRecording()
+        elif event_type == "mouse_scroll":
+            return MouseScrollRecording()
+        elif event_type == "keyboard_press":
+            return KeyboardPressRecording()
+        elif event_type == "keyboard_release":
+            return KeyboardReleaseRecording()
+
+
+class Recorder(Thread):
     def __init__(self):
         super().__init__()
         self._queue = Queue()
-        self._keyboard_control = keyboard.Controller()
-        self._mouse_control = mouse.Controller()
+        self._mouse_monitor_quit = False
+        self._keyboard_monitor_quit = False
+        self._events = []
+        self._last_time = 0.0
+
+    @property
+    def queue(self):
+        return self._queue
+
+    def quit_monitor(self, event):
+        if event == "keyboard_monitor_quit":
+            self._mouse_monitor_quit = True
+            mouse.Controller().click(mouse.Button.middle)
+            # print(event)
+        elif event == "mouse_monitor_quit":
+            self._keyboard_monitor_quit = True
+            keyboard.Controller().press(keyboard.Key.f8)
+            keyboard.Controller().release(keyboard.Key.f8)
+            # print(event)
+
+        if self._keyboard_monitor_quit and self._mouse_monitor_quit:
+            print('quit')
+            return True
+        else:
+            return False
+
+    def set_event_time(self, events):
+        assert isinstance(events, list)
+
+        event_time = events[-1]["event_time"] - self._last_time
+        self._last_time = events[-1]["event_time"]
+        events[-1]["event_time"] = event_time
+        return events
 
     def run(self):
-        mouse_listener = MouseMonitoring(self._queue, self._keyboard_control)
-        keyboard_listener = KeyBoardMonitoring(
-            self._queue, self._mouse_control)
+        while True:
+            event = self._queue.get()
+            assert isinstance(event, str) or isinstance(event, dict)
+            print(event)
+            if self.quit_monitor(event):
+                break
 
-        mouse_listener.start()
-        keyboard_listener.start()
+            if isinstance(event, dict):
+                RecordingProduct().create(event["event_type"])
+                self._events.append(event)
+                events = self.set_event_time(self._events)
+                # print(events[-1])
+        self._events[0]["event_time"] = 1.0  # 延时1秒开始脚本
+        SaveEvents().do(self._events)
 
-        with open('mouse.yaml', 'w') as f:
-            info_list = []
-            while True:
-                info = self._queue.get()
-                # print(info)
-                if not info:
-                    break
-                else:
-                    info_list.append(info)
 
-            list_len = len(info_list)
-
-            for i in range(1, list_len):
-                event_time = (info_list[list_len - i]["event_time"] -
-                               info_list[list_len - i - 1]["event_time"])
-                info_list[list_len - i]["event_time"] = event_time
-
-            if info_list:
-                info_list[0]["event_time"] = 0.1
-                yaml.safe_dump(info_list, f)
+class SaveEvents(object):
+    @staticmethod
+    def do(events):
+        with open('events.yaml', 'w') as f:
+            yaml.safe_dump(events, f, encoding='utf-8', allow_unicode=True)
 
 
 if __name__ == '__main__':
-    recording = Recording()
-    recording.start()
-    recording.join()
+    recorder = Recorder()
+
+    mouse_monitor = MouseMonitoring(recorder.queue)
+    keyboard_monitor = KeyBoardMonitoring(recorder.queue)
+
+    recorder.start()
+    mouse_monitor.start()
+    keyboard_monitor.start()
+
+    recorder.join()
+    mouse_monitor.join()
+    keyboard_monitor.join()
