@@ -106,3 +106,4 @@ venv.bak/
 # pycharm project
 .idea/
 *.yaml
+!software_config.yaml

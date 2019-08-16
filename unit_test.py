@@ -13,7 +13,7 @@
 __author__ = 'kimi'
 
 import unittest
-import playback
+from not_use import playback
 
 
 class TestPlayBack(unittest.TestCase):

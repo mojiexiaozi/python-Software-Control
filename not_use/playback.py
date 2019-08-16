@@ -44,6 +44,8 @@ class WindowEvent(object):
     @staticmethod
     def set_window(event):
         assert isinstance(event, dict)
+        if event["event_type"] not in ["mouse_press", "mouse_scroll"]:
+            return None
 
         window_dict = event["window"]
         win_class_name = window_dict["class_name"]
@@ -55,19 +57,29 @@ class WindowEvent(object):
 
         win = WindowFinder.get_window(win_class_name, win_title)
         if win:
-            if (not win.isActive) or not (event["event_type"] == "mouse_move"):
-                win.restore()
-                win.activate()
+            if not win.isActive:
+                try:
+                    win.restore()
+                    win.activate()
+                    print("window restore")
+                except Exception as e:
+                    print(e)
             if not (win.height == win_height) or not (win.width == win_height):
-                win.resizeTo(win_width, win_height)
+                try:
+                    win.resizeTo(win_width, win_height)
+                except Exception as e:
+                    print(e)
 
             if win.height != win_height or win.width != win_height:
-                win.moveTo(win_left, win_top)
+                try:
+                    win.moveTo(win_left, win_top)
+                except Exception as e:
+                    print(e)
 
 
 class Event(object):
     def __init__(self):
-        self.event_controller=None
+        self.event_controller = None
 
     def do(self, event):
         assert isinstance(event, dict)
@@ -99,31 +111,27 @@ class MoveEvent(Event):
                 event["position_x"],
                 event["position_y"]))
         assert isinstance(self.event_controller, mouse.Controller)
-        self.event_controller.position=(
-    event["position_x"], event["position_y"])
+        self.event_controller.position = (
+            event["position_x"], event["position_y"])
 
 
 class ScrollEvent(Event):
     def do(self, event):
         assert isinstance(self.event_controller, mouse.Controller)
         assert event["event_type"] == "mouse_scroll"
-        assert isinstance(event["position_y"], int)
+        assert isinstance(event["dy"], int)
 
-        dx=event["position_x"] * 120
-        dy=event["position_y"] * 120
+        dx = event["dx"] * 120
+        dy = event["dy"] * 120
 
         self.event_controller.scroll(dx, dy)
-        print(
-            "{0}-scroll to ({1}, {2})".format(
-                event["event_key"],
-                event["position_x"],
-                event["position_y"]))
+        print("scroll {0}".format({True: "Up", False: "Down"}[event["dx"] > 0]))
 
 
 class MousePress(PressEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=mouse.Controller()
+        self.event_controller = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -134,7 +142,7 @@ class MousePress(PressEvent):
 class MouseRelease(ReleaseEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=mouse.Controller()
+        self.event_controller = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -146,7 +154,7 @@ class MouseClick(ClickEvent):
 
     def __init__(self):
         super().__init__()
-        self.event_controller=mouse.Controller()
+        self.event_controller = mouse.Controller()
 
     def do(self, event):
         MouseMove().do(event)
@@ -157,30 +165,30 @@ class MouseClick(ClickEvent):
 class MouseMove(MoveEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=mouse.Controller()
+        self.event_controller = mouse.Controller()
 
 
 class MouseScroll(ScrollEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=mouse.Controller()
+        self.event_controller = mouse.Controller()
 
 
 class KeyboardPress(PressEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=keyboard.Controller()
+        self.event_controller = keyboard.Controller()
 
 
 class KeyboardRelease(ReleaseEvent):
     def __init__(self):
         super().__init__()
-        self.event_controller=keyboard.Controller()
+        self.event_controller = keyboard.Controller()
 
 
 class Unpack(object):
     def unpack(self, event):
-        window_dict=event["window"]
+        window_dict = event["window"]
         if window_dict:
             assert isinstance(window_dict["left"], int)
             assert isinstance(window_dict["top"], int)
@@ -190,7 +198,7 @@ class Unpack(object):
             assert isinstance(window_dict["class_name"], str)
 
             assert isinstance(event["event_time"], float)
-            print(window_dict["title"])
+            # print(window_dict["title"])
             WindowEvent().set_window(event)
 
         return event
@@ -199,7 +207,6 @@ class Unpack(object):
 class MouseMoveUnpack(Unpack):
     def unpack(self, event):
         super().unpack(event)
-        assert pyautogui.onScreen(event["position_x"], event["position_y"])
         return event
 
 
@@ -207,9 +214,9 @@ class MousePressUnpack(Unpack):
     def unpack(self, event):
         super().unpack(event)
         try:
-            event["event_key"]=eval(event["event_key"])
+            event["event_key"] = eval(event["event_key"])
         except NameError:
-            event["event_key"]=event["event_key"]
+            event["event_key"] = event["event_key"]
         assert isinstance(event["event_key"], Button)
 
         assert pyautogui.onScreen(event["position_x"], event["position_y"])
@@ -233,10 +240,18 @@ class KeyboardPressUnpack(Unpack):
     def unpack(self, event):
         super().unpack(event)
         try:
-            event["event_key"]=eval(event["event_key"])
+            event["event_key"] = eval(event["event_key"])
         except NameError:
             event["event_key"] = event["event_key"]
-        assert isinstance(event["event_key"], Key) or isinstance(event["event_key"], str)
+
+        if isinstance(event["event_key"], int):
+            event["event_key"] = str(event["event_key"])
+        # print(event["event_key"])
+        assert isinstance(
+            event["event_key"],
+            Key) or isinstance(
+            event["event_key"],
+            str)
 
         return event
 
@@ -272,12 +287,13 @@ class UnpackProduct(object):
 
 class Unpacking(object):
     def __init__(self):
-        self._unpack_product_create_method= UnpackProduct().create
+        self._unpack_product_create_method = UnpackProduct().create
 
     def unpacking(self, event):
         assert isinstance(event, dict)
-        print(event)
-        event= self._unpack_product_create_method(event["event_type"]).unpack(event)
+        # print(event)
+        event = self._unpack_product_create_method(
+            event["event_type"]).unpack(event)
         return event
 
 
@@ -322,15 +338,16 @@ class PlayBack(Thread):
     @staticmethod
     def open_event():
         with open("events.yaml", 'r') as f:
-            events= yaml.safe_load(f)
+            events = yaml.safe_load(f)
             # assert isinstance(events, list)
         return events
 
     def run(self):
-        events= self.open_event()
+        print("start play back after 3s")
+        events = self.open_event()
         for event in events:
             # print(event)
-            now_event= Unpacking().unpacking(event)
+            now_event = Unpacking().unpacking(event)
             # print(now_event)
             EventProduct().create(now_event["event_type"]).do(now_event)
             sleep(now_event["event_time"])
