@@ -38,9 +38,6 @@ class EventsInterface(object):
         layouts.pack(controls)
 
         controls.empty()
-        layouts.pack(controls)
-
-        controls.empty()
         button_size = (5, 1)
         controls.pack(Gui.Button('OK', key="__OK__", size=button_size))
         controls.pack(Gui.Button("Cancel", key="__CANCEL__", size=button_size))

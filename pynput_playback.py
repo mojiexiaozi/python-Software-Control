@@ -88,7 +88,7 @@ class KeyboardPressAction(KeyboardAction):
         assert isinstance(self.controller, keyboard.Controller)
         try:
             self.controller.press(event.key)
-        except BaseException as e:
+        except Exception as e:
             print(e)
 
 
@@ -98,7 +98,7 @@ class KeyboardReleaseAction(KeyboardAction):
         assert isinstance(self.controller, keyboard.Controller)
         try:
             self.controller.release(event.key)
-        except BaseException as e:
+        except Exception as e:
             print(e)
 
 
@@ -198,8 +198,8 @@ class LoadFromYaml(object):
 class Playback(object):
     @staticmethod
     def run(playback_queue, interface_queue):
-        assert isinstance(playback_queue, Queue)
-        assert isinstance(interface_queue, Queue)
+        # assert isinstance(playback_queue, Queue)
+        # assert isinstance(interface_queue, Queue)
 
         KeyboardListener(playback_queue=playback_queue).start()
 
@@ -208,6 +208,8 @@ class Playback(object):
         events = LoadFromYaml().save_load()
         last_time = events[0]["time"]
         playback_queue.put("__CONTINUE__")
+
+        event_cls = None
         for event in events:
             command = playback_queue.get()
             if command == "__PLAYBACK_QUIT__":
@@ -222,15 +224,17 @@ class Playback(object):
                 last_time = event["time"]
                 sleep(delay_time)
             # print("delay time:{0}".format(delay_time))
+            interface_queue.put(("__PLAYBACK_MOTION__", event_cls.event_type))
             playback_queue.put("__CONTINUE__")
             sleep(0.01)
+        interface_queue.put(("__PLAYBACK_QUIT__", None))
         print("playback done")
 
 
 class KeyboardListener(Thread):
     def __init__(self, playback_queue):
         super().__init__()
-        assert isinstance(playback_queue, Queue)
+        # assert isinstance(playback_queue, Queue)
         self._playback_queue = playback_queue
 
     def on_press(self, key):
@@ -247,11 +251,6 @@ class KeyboardListener(Thread):
 class LaunchPlayback(Thread):
     def __init__(self, playback_queue, interface_queue=None):
         super().__init__()
-        assert isinstance(
-            playback_queue,
-            Queue) and isinstance(
-            interface_queue,
-            Queue)
         self._playback_queue = playback_queue
         self._interface_queue = interface_queue
 
@@ -262,5 +261,6 @@ class LaunchPlayback(Thread):
 
 
 if __name__ == '__main__':
-    Playback().run(playback_queue=Queue(),
-                   interface_queue=Queue())
+    launcher = LaunchPlayback(Queue(), Queue())
+    launcher.start()
+    launcher.join()

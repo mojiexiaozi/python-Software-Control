@@ -22,7 +22,7 @@ from threading import Thread
 from pynput_playback import LaunchPlayback
 
 
-class PlayingInterface(object):
+class PlaybackInterface(object):
     def __init__(self):
         super().__init__()
         self._layouts = Layouts()
@@ -54,32 +54,10 @@ class PlayingInterface(object):
         self._window.DisableClose = True
 
 
-class WarningDialog(object):
-    def __init__(self, warning_message):
-        self._layout = Layouts()
-        self.interface_design(warning_message)
-        self._window = Gui.Window(title="Warning", layout=self._layout.layout)
-        # self.handle_event()
-
-    def interface_design(self, warning_message):
-        controls = Controls()
-        controls.pack(Gui.Text(warning_message, key="__WARNING_MESSAGE__"))
-        self._layout.pack(controls)
-
-        controls = Controls()
-        controls.pack(Gui.OK(key="__OK__"))
-        self._layout.pack(controls)
-
-    def handle_event(self):
-        event, _ = self._window.Read(3000)
-        print("warning dialog close")
-        self._window.Close()
-
-
 class InterfaceProduct(object):
     @staticmethod
     def product():
-        return PlayingInterface()
+        return PlaybackInterface()
 
 
 class WindowEventMonitor(object):
@@ -171,6 +149,9 @@ class WindowEventHandle(Thread):
                 playing = False
                 self._window_instance.update_element("__START_STOP__", play_button_dict[playing])
 
+            elif event == "__PLAYBACK_MOTION__":
+                self._window_instance.update_element("__MESSAGE__", event_message)
+
         self._window_instance.close()
         print("window event handle quit...")
 
@@ -206,7 +187,7 @@ class Window(object):
         self._window.Title = title
 
 
-class LaunchWindow(object):
+class LaunchPlayBackInterface(object):
     def __init__(self):
         window = Window(InterfaceProduct())
         monitor_queue = Queue()
@@ -218,9 +199,9 @@ class LaunchWindow(object):
                                                 monitor_queue=monitor_queue,
                                                 window_instance=window)
         window_event_handle.setDaemon(True)
-        window_event_handle.start()
+        # window_event_handle.start()
         print("window event handle start")
-        window_event_monitor.run()
+        # window_event_monitor.run()
 
         # window_event_handle.join()
         # window_event_monitor.join()
@@ -229,7 +210,7 @@ class LaunchWindow(object):
 
 
 if __name__ == '__main__':
-    LaunchWindow()
+    LaunchPlayBackInterface()
 
 
 

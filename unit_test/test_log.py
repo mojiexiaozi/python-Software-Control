@@ -38,9 +38,6 @@ class TestLog(unittest.TestCase):
         logger = Logger().get_logger(__name__)
         logger.info("test-info")
 
-    def test_file_create(self):
-        pass
-
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

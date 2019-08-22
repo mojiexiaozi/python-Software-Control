@@ -17,7 +17,7 @@ import PySimpleGUI as Gui
 from gui import Controls, Layouts
 
 from queue import Queue
-from threading import Thread
+from threading import Thread, Condition
 
 from pynput_record import LaunchRecord
 
@@ -27,6 +27,11 @@ class RecordingInterface(object):
         super().__init__()
         self._layouts = Layouts()
         self._window = None
+        self._is_active = Condition()
+
+    @property
+    def is_active(self):
+        return self._is_active
 
     @property
     def layouts(self):
@@ -52,28 +57,6 @@ class RecordingInterface(object):
         self._design_window()
         self._window = Gui.Window('Record', self._layouts.layout, alpha_channel=0.8)
         self._window.DisableClose = True
-
-
-class WarningDialog(object):
-    def __init__(self, warning_message):
-        self._layout = Layouts()
-        self.interface_design(warning_message)
-        self._window = Gui.Window(title="Warning", layout=self._layout.layout)
-        # self.handle_event()
-
-    def interface_design(self, warning_message):
-        controls = Controls()
-        controls.pack(Gui.Text(warning_message, key="__WARNING_MESSAGE__"))
-        self._layout.pack(controls)
-
-        controls = Controls()
-        controls.pack(Gui.OK(key="__OK__"))
-        self._layout.pack(controls)
-
-    def handle_event(self):
-        event, _ = self._window.Read(3000)
-        print("warning dialog close")
-        self._window.Close()
 
 
 class InterfaceProduct(object):
@@ -148,7 +131,7 @@ class WindowEventHandle(Thread):
             # print(1)
             event, event_message = self._window_event_queue.get()
             print(event, event_message)
-            if event is None or event == "__QUIT__":
+            if event in [None, "__QUIT__"]:
                 if recording:
                     # WarningDialog("recording, do not exit")
                     print("ignore")
@@ -169,6 +152,8 @@ class WindowEventHandle(Thread):
                 self.stop_record()
                 recording = False
                 self._window_instance.update_element("__START_STOP__", record_button_dict[recording])
+            elif event == "__RECORD_EVENT__":
+                self._window_instance.update_element("__MESSAGE__", message=event_message)
 
         self._window_instance.close()
         print("window event handle quit...")
@@ -205,7 +190,7 @@ class Window(object):
         self._window.Title = title
 
 
-class LaunchWindow(object):
+class LaunchRecordInterface(object):
     def __init__(self):
         window = Window(InterfaceProduct())
         monitor_queue = Queue()
@@ -216,19 +201,19 @@ class LaunchWindow(object):
         window_event_handle = WindowEventHandle(window_event_queue=window_event_queue,
                                                 monitor_queue=monitor_queue,
                                                 window_instance=window)
-        window_event_handle.setDaemon(True)
+        # window_event_handle.setDaemon(True)
         window_event_handle.start()
         print("window event handle start")
-        window_event_monitor.run()
+        # window_event_monitor.run()
 
-        # window_event_handle.join()
+        window_event_handle.join()
         # window_event_monitor.join()
 
         # print("interface closed")
 
 
 if __name__ == '__main__':
-    LaunchWindow()
+    LaunchRecordInterface()
 
 
 

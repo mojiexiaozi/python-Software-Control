@@ -12,6 +12,8 @@
 """
 __author__ = 'Lyl'
 
+import PySimpleGUI as Gui
+
 
 class Controls(object):
     def __init__(self):
@@ -19,9 +21,11 @@ class Controls(object):
 
     @property
     def controls(self):
+        assert self._controls.__len__() >= 1
         return self._controls
 
     def pack(self, control):
+        assert control is not None
         self._controls.append(control)
 
     def empty(self):
@@ -34,6 +38,7 @@ class Layouts(object):
 
     @property
     def layout(self):
+        assert self._layouts.__len__() >= 1  # 必须非空
         return self._layouts
 
     def pack(self, controls):

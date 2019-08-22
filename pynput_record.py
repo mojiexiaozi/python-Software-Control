@@ -5,9 +5,9 @@ Created on Mon Aug 12 10:54:53 2019
 @author: Lyl
 """
 
-from threading import Thread
 import yaml
 from queue import Queue
+from threading import Thread
 from software_init import Init
 from pynput import mouse, keyboard
 import win32gui
@@ -271,7 +271,7 @@ class Window(object):
 
 class Listener(object):
     def __init__(self, record_queue):
-        assert isinstance(record_queue, Queue)
+        # assert isinstance(record_queue, Queue)
         self._record_queue = record_queue
 
     @property
@@ -337,7 +337,7 @@ class KeyboardListener(Listener):
 class ListenerProduct(object):
     @staticmethod
     def product(monitor_name="mouse", record_queue=Queue()):
-        assert isinstance(record_queue, Queue)
+        # assert isinstance(record_queue, Queue)
         if monitor_name == 'mouse':
             return MouseListener(record_queue)
         elif monitor_name == "keyboard":
@@ -345,10 +345,14 @@ class ListenerProduct(object):
 
 
 class Record(Thread):
-    def __init__(self, record_queue):
+    def __init__(self, record_queue, event_handle_queue):
         super().__init__()
-        assert isinstance(record_queue, Queue)
+        # assert isinstance(record_queue, Queue)
         self._record_queue = record_queue
+        # print(event_handle_queue, Queue)
+        # assert isinstance(event_handle_queue, Queue)
+        self._event_handle_queue = event_handle_queue
+
         self._last_time = -1
 
     @staticmethod
@@ -371,7 +375,8 @@ class Record(Thread):
             if isinstance(event, Event):
                 event_dict = event.event_dict
 
-                print(event_dict)
+                print(event.event_type)
+                self._event_handle_queue.put(("__RECORD_EVENT__", event.event_type))
                 event_dict_list.append(event_dict)
         print("quit...")
         SaveEvent().save_to_yaml_file(event_dict_list)
@@ -395,23 +400,23 @@ class SaveEvent(object):
 
 class RecordProduct(object):
     @staticmethod
-    def product(record_queue=Queue()):
-        return Record(record_queue)
+    def product(record_queue=Queue(), event_handle_queue=Queue()):
+        return Record(record_queue=record_queue, event_handle_queue=event_handle_queue)
 
 
 class LaunchRecord(Thread):
-    def __init__(self, window_event_queue, record_queue):
+    def __init__(self, event_handle_queue, record_queue):
         super().__init__()
-        assert isinstance(window_event_queue, Queue)
-        assert isinstance(record_queue, Queue)
-        self._window_event_queue = window_event_queue
+        # assert isinstance(window_event_queue, Queue)
+        # assert isinstance(record_queue, Queue)
+        self._event_handle_queue = event_handle_queue
         self._record_queue = record_queue
 
     def run(self):
-        mouse_listener = ListenerProduct.product("mouse", self._record_queue)
-        keyboard_listener = ListenerProduct.product(
-            "keyboard", self._record_queue)
-        recorder = RecordProduct.product(self._record_queue)
+        mouse_listener = ListenerProduct.product(monitor_name="mouse", record_queue=self._record_queue)
+        keyboard_listener = ListenerProduct.product(monitor_name="keyboard", record_queue=self._record_queue)
+        recorder = RecordProduct.product(record_queue=self._record_queue,
+                                         event_handle_queue=self._event_handle_queue)
 
         mouse_listener.listener()
         print("mouse listener...")
@@ -422,8 +427,10 @@ class LaunchRecord(Thread):
         print("recording...")
         recorder.join()
         print("record done")
-        self._window_event_queue.put(("__RECORD_QUIT__", None))
+        self._event_handle_queue.put(("__RECORD_QUIT__", None))
 
 
 if __name__ == '__main__':
-    LaunchRecord(Queue(), Queue()).start()
+    launcher = LaunchRecord(Queue(), Queue())
+    launcher.start()
+    launcher.join()
