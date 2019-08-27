@@ -11,30 +11,25 @@
 -------------------------------------------------
 """
 __author__ = 'Lyl'
-import unittest
-from software_init import Init
+import pytest
+from software_init import Init, SoftwareConfig
 
 
-class TestSoftwareInit(unittest.TestCase):
-    def test_load(self):
-        software_config = Init()
+software_config = Init().software_config
 
-        self.assertEqual(software_config.default_record_file, "pynput_events.yaml")
-        self.assertNotEqual(software_config.default_record_file, "pynput_events")
-        self.assertIsInstance(software_config.logging_config, dict)
 
-    def test_init_reload(self):
-        software_config = Init()
-        software_config.load_config()
+def test_load(self):
+    assert isinstance(software_config, SoftwareConfig)
+    print("using_script:{0}".format(software_config.using_script))
+    print("scripts_dir:{0}".format(software_config.scripts_dir))
+    print("log_dir:{0}".format(software_config.log_dir))
+    print("logging_config:{0}".format(software_config.logging_config))
+    print("software_dir:{0}".format(software_config.software_dir))
 
-        self.assertEqual(software_config.default_record_file, "pynput_events.yaml")
-        self.assertIsInstance(software_config.logging_config, dict)
 
-    def test_singleton(self):
-        config_one = Init()
-        config_other = Init()
-        self.assertEqual(config_one, config_other)
+def test_dumps(self):
+    software_config.dumps()
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    pytest.main()

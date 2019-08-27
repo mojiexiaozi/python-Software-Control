@@ -3,7 +3,7 @@
 -------------------------------------------------
    File Name：     test_message_split
    Description :
-   Author :       
+   Auth or :
    date：          2019/8/23
 -------------------------------------------------
    Change Activity:
@@ -11,3 +11,11 @@
 -------------------------------------------------
 """
 __author__ = 'Lyl'
+import re
+import os
+
+message = 'test1\ntest2\ntest3\ndone.\n\n'
+
+print(re.split(pattern="\n", string=message))
+print(os.getcwd())
+print(os.path.isdir('log'))

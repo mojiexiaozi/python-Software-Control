@@ -22,6 +22,10 @@ from extract_input_message import LaunchExtractor
 
 from multiprocessing import Process
 
+from pynput_record import SaveEvent
+
+import re
+
 
 # -------------------------------------------------- #
 #                       界面事件虚类                   #
@@ -142,6 +146,8 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
     """
     def run(self) -> None:
         print("ReviewInterfaceEventHandle thread start")
+        event_cls_list = None
+        user_input_event_list = None
         while True:
             event, event_message = self.event_handle_queue.get()
             print(event, event_message)
@@ -157,11 +163,30 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
                 #     events = yaml.safe_load(file_ref)
                 #     # print(events)
                 #     self._gui.Element("__EVENTS_MESSAGE__").Update(events)
-                user_input_message = LaunchExtractor().do()
-                print(user_input_message)
+                extractor_message = LaunchExtractor().do()
+                user_input_message = extractor_message[0]
+                event_cls_list = extractor_message[1]
+                user_input_event_list = extractor_message[2]
+                # print(user_input_message)
                 self.window.Element("__EVENTS_MESSAGE__").Update(user_input_message)
-            else:
-                print("event: {0} value: {1}".format(event, event_message))
+            elif event == "__SAVE__":
+                message = event_message["__EVENTS_MESSAGE__"]
+                message_list = re.split(pattern="\n", string=message)
+
+                for i in range(len(user_input_event_list)):
+                    try:
+                        user_input_event_list[i].set_message(message_list[i])
+                    except IndexError:
+                        pass
+
+                for user_input_event in user_input_event_list:
+                    event_cls_list[event_cls_list.index(user_input_event)] = user_input_event
+
+                if event_cls_list:
+                    event_dict_list = [event.event_dict for event in event_cls_list]
+                    SaveEvent.save_to_yaml_file(event_dict_list)
+
+            print("event: {0} value: {1}".format(event, event_message))
 
         self.window.Close()
 

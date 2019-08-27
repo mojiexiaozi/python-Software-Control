@@ -21,7 +21,7 @@ from pynput import mouse, keyboard
 from threading import Thread
 from queue import Queue
 
-from pynput_record import EventProduct, Event
+from pynput_record import EventProduct, Event, UserInputEvent
 from time import sleep
 
 software_init = Init()
@@ -33,6 +33,16 @@ class Action(object):
 
     def action(self, event):
         assert isinstance(event, Event)
+
+
+class UserInputAction(Action):
+    def __init__(self):
+        super().__init__()
+        self.controller = keyboard.Controller()
+
+    def action(self, event):
+        assert isinstance(event, UserInputEvent)
+        self.controller.type(event.message)
 
 
 class MouseAction(Action):
@@ -110,7 +120,8 @@ class ActionProduct(object):
                               "mouse click release",
                               "mouse scroll",
                               "keyboard press",
-                              "keyboard release"]
+                              "keyboard release",
+                              "user input"]
         if event_type == "mouse move":
             return MouseMoveAction()
         elif event_type == "mouse click press":
@@ -123,6 +134,8 @@ class ActionProduct(object):
             return KeyboardPressAction()
         elif event_type == "keyboard release":
             return KeyboardReleaseAction()
+        elif event_type == "user input":
+            return UserInputAction()
 
 
 class Unpack(object):
@@ -184,6 +197,12 @@ class Unpack(object):
             if isinstance(key, int):
                 key = str(key)
             event_cls.set_key(key)
+
+        elif event_type == "user input":
+            event_cls.set_time(event["time"])
+            event_cls.set_message(event["message"])
+            event_cls.set_window(event["window"])
+
         return event_cls
 
 

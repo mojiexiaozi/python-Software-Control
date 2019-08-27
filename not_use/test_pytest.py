@@ -23,5 +23,14 @@ def test_answer():
     assert func(3) == 5
 
 
+def f():
+    raise SystemExit(1)
+
+
+def test_raise():
+    with pytest.raises(SystemExit):
+        f()
+
+
 if __name__ == '__main__':
     pytest.main()

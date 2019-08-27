@@ -1,35 +1,45 @@
-default record file: pynput_events.yaml
+log dir: log
 logging config:
-  version: 1
   formatters:
-    simple:
-      format: '%(asctime)s - %(module)s.%(funcName)s:%(lineno)d - %(levelname)s - %(message)s'
     brief:
-      format: 'line:%(lineno)d-%(levelname)s - %(message)s'
+      format: line:%(lineno)d-%(levelname)s - %(message)s
+    simple:
+      format: '%(asctime)s - %(module)s.%(funcName)s:%(lineno)d - %(levelname)s -
+        %(message)s'
   handlers:
     console:
       class: logging.StreamHandler
-      level: INFO
       formatter: brief
-      stream:
+      level: INFO
+      stream: null
+    error:
+      backupCount: 20
+      class: logging.handlers.RotatingFileHandler
+      encoding: utf8
+      filename: error.log
+      formatter: simple
+      level: ERROR
+      maxBytes: 10485760
     file:
       class: logging.FileHandler
-      level: DEBUG
-      formatter: simple
       filename: debug.log
-    error:
-      class: logging.handlers.RotatingFileHandler
-      level: ERROR
       formatter: simple
-      filename: error.log
-      maxBytes: 10485760
-      backupCount: 20
-      encoding: utf8
+      level: DEBUG
   loggers:
     simpleExample:
+      handlers:
+      - console
+      - file
+      - error
       level: DEBUG
-      handlers: [console, file, error]
-      propagate: no
+      propagate: false
   root:
+    handlers:
+    - console
+    - file
+    - error
     level: DEBUG
-    handlers: [console, file, error]
+  version: 1
+scripts dir: script
+software dir: C:\CASI项目管理\CASI003-程序操控\CASI003
+using script: ''

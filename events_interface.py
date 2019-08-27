@@ -14,9 +14,7 @@ __author__ = 'Lyl'
 
 
 import PySimpleGUI as Gui
-
 from gui import Controls, Layouts
-
 from extract_input_message import LaunchExtractor
 
 

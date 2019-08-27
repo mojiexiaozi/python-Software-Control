@@ -1,8 +1,30 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Created on Mon Aug 12 10:54:53 2019
+---------------------------------------------------------------------
+@Project      :    qq_like
+@File         :    chat_interface.py
+@Contact      :    njust_linyilin@163.com
+@License      :    (C)Copyright 2019-2020, CASI
 
-@author: Lyl
+@Modify Time      @Author    @Version    @Description
+------------      -------    --------    -----------
+2019/8/26 15:21    kimi      1.0         None
+
+# code is far away from bugs with the god animal protecting
+    I love animals. They taste delicious.
+              ┏┓      ┏┓
+            ┏┛┻━━━┛┻┓
+            ┃      ☃      ┃
+            ┃  ┳┛  ┗┳  ┃
+            ┃      ┻      ┃
+            ┗━┓      ┏━┛
+                ┃      ┗━━━┓
+                ┃  神兽保佑    ┣┓
+                ┃　永无BUG！   ┏┛
+                ┗┓┓┏━┳┓┏┛
+                  ┃┫┫  ┃┫┫
+                  ┗┻┛  ┗┻┛
 """
 
 import yaml
@@ -12,10 +34,10 @@ from software_init import Init
 from pynput import mouse, keyboard
 import win32gui
 from time import time
-from log import Logger
+from script_save import SaveEvent
 
 
-software_config = Init()
+software_config = Init().software_config
 
 
 class Event(object):
@@ -93,11 +115,8 @@ class KeyboardEvent(Event):
 
     def dumps(self):
         super().dumps()
-        assert isinstance(
-            self._key,
-            keyboard.Key) or isinstance(
-            self._key,
-            keyboard.KeyCode)
+        # assert isinstance(self._key, keyboard.Key) or isinstance(self._key, keyboard.KeyCode)
+        print(self._key, type(self._key))
         try:
             key = self._key.char
         except AttributeError:
@@ -177,9 +196,32 @@ class KeyboardRelease(KeyboardEvent):
         self.event_type = "keyboard release"
 
 
+class UserInputEvent(Event):
+    def __init__(self):
+        super().__init__()
+        self.event_type = "user input"
+        self._message = ""
+
+    @property
+    def message(self):
+        return self._message
+
+    def set_message(self, message):
+        self._message = message
+
+    def dumps(self):
+        super().dumps()
+        self.set_event_dict("message", self._message)
+
+
 class Product(object):
     def product(self):
         pass
+
+
+class UserInputEventProduct(Product):
+    def product(self):
+        return UserInputEvent()
 
 
 class MouseMoveProduct(Product):
@@ -220,7 +262,8 @@ class EventProduct(object):
                               "mouse click release",
                               "mouse scroll",
                               "keyboard press",
-                              "keyboard release"]
+                              "keyboard release",
+                              "user input"]
         if event_type == "mouse move":
             return MouseMoveProduct().product()
         elif event_type == "mouse click press":
@@ -233,6 +276,8 @@ class EventProduct(object):
             return KeyboardPressProduct().product()
         elif event_type == "keyboard release":
             return KeyboardReleaseProduct().product()
+        elif event_type == "user input":
+            return UserInputEventProduct().product()
 
 
 class Window(object):
@@ -380,22 +425,6 @@ class Record(Thread):
                 event_dict_list.append(event_dict)
         print("quit...")
         SaveEvent().save_to_yaml_file(event_dict_list)
-
-
-class SaveEvent(object):
-    @staticmethod
-    def save_to_yaml_file(event_dict_list):
-        assert isinstance(event_dict_list, list)
-        if event_dict_list:
-            assert isinstance(event_dict_list[0], dict)
-
-            with open(software_config.default_record_file, 'w') as file_ref:
-                yaml.safe_dump(
-                    event_dict_list,
-                    file_ref,
-                    encoding='utf-8',
-                    allow_unicode=True)
-                print("save...")
 
 
 class RecordProduct(object):

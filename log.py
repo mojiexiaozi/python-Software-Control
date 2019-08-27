@@ -9,8 +9,12 @@ import logging
 import logging.config
 
 from software_init import Init
+import os
 
-software_config = Init()
+software_config = Init().software_config
+
+os.chdir(software_config.software_dir)
+os.chdir(software_config.log_dir)
 
 
 def singleton(cls):
