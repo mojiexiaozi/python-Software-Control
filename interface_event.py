@@ -12,19 +12,23 @@
 """
 __author__ = 'Lyl'
 
-import PySimpleGUI as Gui
-from threading import Thread
-from queue import Queue
-from pynput_playback import LaunchPlayback
-from pynput_record import LaunchRecord
-from interface import MainInterface, PlaybackInterface, RecordingInterface, ReviewInterface
-from extract_input_message import LaunchExtractor
-
-from multiprocessing import Process
-
-from pynput_record import SaveEvent
-
+import os
 import re
+from multiprocessing import Process
+from queue import Queue
+from threading import Thread
+
+import PySimpleGUI as Gui
+
+from extract_input_message import LaunchExtractor
+from interface import (MainInterface, PlaybackInterface, RecordingInterface,
+                       ReviewInterface)
+from pynput_playback import LaunchPlayback
+from pynput_record import LaunchRecord, SaveEvent
+
+from software_init import Init
+
+software_config = Init().software_config
 
 
 # -------------------------------------------------- #
@@ -34,7 +38,6 @@ class InterfaceEvent(object):
     """
     界面事件虚类
     """
-
     def __init__(self, window, event_handle_queue):
         """
         :param window: PySimpleGui 窗口类实例
@@ -88,7 +91,6 @@ class InterfaceEventMonitor(InterfaceEvent):
 # -------------------------------------------------- #
 class InterfaceEventHandle(InterfaceEvent, Thread):
     """界面事件处理类"""
-
     def __del__(self):
         print("interface event handle class release")
 
@@ -155,20 +157,25 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
             if event in (None, "__QUIT__"):
                 break
             elif event == "__LOAD_EVENTS__":
-                file_name = Gui.filedialog.askopenfilename(initialdir="./",
-                                                           title="please choose a events file",
-                                                           defaultextension="yaml",
-                                                           filetypes=[("default", ".yaml"), ("events txt", ".txt")])
+                initialdir = os.path.join(software_config.software_dir,
+                                          software_config.scripts_dir)
+                choose_script_path = Gui.filedialog.askopenfilename(
+                    initialdir=initialdir,
+                    title="please choose a events file",
+                    defaultextension="yaml",
+                    filetypes=[("default", ".yaml"), ("events txt", ".txt")])
                 # with open(file_name, 'r') as file_ref:
                 #     events = yaml.safe_load(file_ref)
                 #     # print(events)
                 #     self._gui.Element("__EVENTS_MESSAGE__").Update(events)
-                extractor_message = LaunchExtractor().do()
-                user_input_message = extractor_message[0]
-                event_cls_list = extractor_message[1]
-                user_input_event_list = extractor_message[2]
-                # print(user_input_message)
-                self.window.Element("__EVENTS_MESSAGE__").Update(user_input_message)
+                extractor_message = LaunchExtractor().do(choose_script_path)
+                if extractor_message:
+                    user_input_message = extractor_message[0]
+                    event_cls_list = extractor_message[1]
+                    user_input_event_list = extractor_message[2]
+                    # print(user_input_message)
+                    self.window.Element("__EVENTS_MESSAGE__").Update(
+                        user_input_message)
             elif event == "__SAVE__":
                 message = event_message["__EVENTS_MESSAGE__"]
                 message_list = re.split(pattern="\n", string=message)
@@ -180,10 +187,13 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
                         pass
 
                 for user_input_event in user_input_event_list:
-                    event_cls_list[event_cls_list.index(user_input_event)] = user_input_event
+                    event_cls_list[event_cls_list.index(
+                        user_input_event)] = user_input_event
 
                 if event_cls_list:
-                    event_dict_list = [event.event_dict for event in event_cls_list]
+                    event_dict_list = [
+                        event.event_dict for event in event_cls_list
+                    ]
                     SaveEvent.save_to_yaml_file(event_dict_list)
 
             print("event: {0} value: {1}".format(event, event_message))
@@ -222,7 +232,8 @@ class PlaybackInterfaceEventHandle(InterfaceEventHandle):
                 break
             elif event == "__START_STOP__":
                 playing = not playing
-                self.window.Element("__START_STOP__").Update(play_button_dict[playing])
+                self.window.Element("__START_STOP__").Update(
+                    play_button_dict[playing])
 
                 if playing:
                     self.window.Element("__MESSAGE__").Update("playing...")
@@ -238,7 +249,8 @@ class PlaybackInterfaceEventHandle(InterfaceEventHandle):
                 self.window.Element("__MESSAGE__").Update("play done")
                 self.stop_play()
                 playing = False
-                self.window.Element("__START_STOP__").Update(play_button_dict[playing])
+                self.window.Element("__START_STOP__").Update(
+                    play_button_dict[playing])
                 self.window.FindElement("__QUIT__").Update(disabled=False)
 
             elif event == "__PLAYBACK_MOTION__":
@@ -261,7 +273,8 @@ class RecordInterfaceEventHandle(InterfaceEventHandle):
         print(self.window)
         self.window.SetAlpha(0.3)
 
-        LaunchRecord(event_handle_queue=self.event_handle_queue, record_queue=record_queue).start()
+        LaunchRecord(event_handle_queue=self.event_handle_queue,
+                     record_queue=record_queue).start()
         print("launcher done")
 
     def stop_record(self):
@@ -281,7 +294,8 @@ class RecordInterfaceEventHandle(InterfaceEventHandle):
             elif event == "__START_STOP__":
                 recording = not recording
                 print("recording:{0}".format(recording))
-                self.window.Element("__START_STOP__").Update(record_button_dict[recording])
+                self.window.Element("__START_STOP__").Update(
+                    record_button_dict[recording])
 
                 if recording:
                     self.window.Element("__MESSAGE__").Update("recording...")
@@ -297,7 +311,8 @@ class RecordInterfaceEventHandle(InterfaceEventHandle):
                 self.window.Element("__MESSAGE__").Update("record done")
                 self.stop_record()
                 recording = False
-                self.window.FindElement("__START_STOP__").Update(record_button_dict[recording])
+                self.window.FindElement("__START_STOP__").Update(
+                    record_button_dict[recording])
                 self.window.FindElement("__QUIT__").Update(disabled=False)
 
             elif event == "__RECORD_EVENT__":
@@ -317,8 +332,10 @@ class LaunchMainInterface(Process):
         win = main_interface.window
 
         event_handle_queue = Queue()
-        monitor = InterfaceEventMonitor(window=win, event_handle_queue=event_handle_queue)
-        handle = MainInterfaceEventHandle(window=win, event_handle_queue=event_handle_queue)
+        monitor = InterfaceEventMonitor(window=win,
+                                        event_handle_queue=event_handle_queue)
+        handle = MainInterfaceEventHandle(
+            window=win, event_handle_queue=event_handle_queue)
 
         handle.start()
         monitor.run()
@@ -334,8 +351,10 @@ class LaunchReviewInterface(Process):
         win = interface.window
 
         event_handle_queue = Queue()
-        monitor = InterfaceEventMonitor(window=win, event_handle_queue=event_handle_queue)
-        handle = ReviewInterfaceEventHandle(window=win, event_handle_queue=event_handle_queue)
+        monitor = InterfaceEventMonitor(window=win,
+                                        event_handle_queue=event_handle_queue)
+        handle = ReviewInterfaceEventHandle(
+            window=win, event_handle_queue=event_handle_queue)
 
         handle.start()
         monitor.run()
@@ -351,8 +370,10 @@ class LaunchRecordInterface(Process):
         win = interface.window
 
         event_handle_queue = Queue()
-        monitor = InterfaceEventMonitor(window=win, event_handle_queue=event_handle_queue)
-        handle = RecordInterfaceEventHandle(window=win, event_handle_queue=event_handle_queue)
+        monitor = InterfaceEventMonitor(window=win,
+                                        event_handle_queue=event_handle_queue)
+        handle = RecordInterfaceEventHandle(
+            window=win, event_handle_queue=event_handle_queue)
 
         handle.start()
         monitor.run()
@@ -368,8 +389,10 @@ class LaunchPlaybackInterface(Process):
         win = interface.window
 
         event_handle_queue = Queue()
-        monitor = InterfaceEventMonitor(window=win, event_handle_queue=event_handle_queue)
-        handle = PlaybackInterfaceEventHandle(window=win, event_handle_queue=event_handle_queue)
+        monitor = InterfaceEventMonitor(window=win,
+                                        event_handle_queue=event_handle_queue)
+        handle = PlaybackInterfaceEventHandle(
+            window=win, event_handle_queue=event_handle_queue)
 
         handle.start()
         monitor.run()

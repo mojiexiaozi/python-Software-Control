@@ -1,10 +1,16 @@
-# -*- coding:utf-8 -*-
-"""
-author:Lyl
-date:2019-07-18
-description: setting logging by yaml config file
-"""
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''
+@File    :   log.py
+@Time    :   2019/08/28 09:11:34
+@Author  :   MsterLin
+@Version :   1.0
+@Contact :   15651838825@163.com
+@License :   (C)Copyright 2018-2019, CASIA
+@Desc    :   setting logging by yaml config file
+'''
 
+# here put the import lib
 import logging
 import logging.config
 
@@ -12,9 +18,6 @@ from software_init import Init
 import os
 
 software_config = Init().software_config
-
-os.chdir(software_config.software_dir)
-os.chdir(software_config.log_dir)
 
 
 def singleton(cls):
@@ -24,14 +27,19 @@ def singleton(cls):
         if cls not in instances:
             instances[cls] = cls(*args, **kwargs)
         return instances[cls]
+
     return wrapper
 
 
 @singleton
 class Logger(object):
+    """ Init logging through yaml setting """
     def __init__(self, default_level=logging.DEBUG):
+        os.chdir(software_config.software_dir)
+        os.chdir(software_config.log_dir)
         try:
-            self._logger = logging.config.dictConfig(software_config.logging_config)
+            self._logger = logging.config.dictConfig(
+                software_config.logging_config)
             logging.info("logging init done")
         except ValueError as e:
             print(e)

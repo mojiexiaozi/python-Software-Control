@@ -12,7 +12,7 @@
 """
 __author__ = 'Lyl'
 
-from software_init import Init
+from software_init import Init, SoftwareConfig
 import yaml
 from pynput.mouse import Button
 from pynput.keyboard import KeyCode, Key
@@ -23,8 +23,10 @@ from queue import Queue
 
 from pynput_record import EventProduct, Event, UserInputEvent
 from time import sleep
+import os
 
-software_init = Init()
+software_config = Init().software_config
+assert isinstance(software_config, SoftwareConfig)
 
 
 class Action(object):
@@ -98,8 +100,9 @@ class KeyboardPressAction(KeyboardAction):
         assert isinstance(self.controller, keyboard.Controller)
         try:
             self.controller.press(event.key)
-        except Exception as e:
+        except NameError as e:
             print(e)
+            print("{0}-press-error".format(event.key))
 
 
 class KeyboardReleaseAction(KeyboardAction):
@@ -108,20 +111,18 @@ class KeyboardReleaseAction(KeyboardAction):
         assert isinstance(self.controller, keyboard.Controller)
         try:
             self.controller.release(event.key)
-        except Exception as e:
+        except NameError as e:
             print(e)
+            print("{0}-release-error".format(event.key))
 
 
 class ActionProduct(object):
     @staticmethod
     def product(event_type):
-        assert event_type in ["mouse move",
-                              "mouse click press",
-                              "mouse click release",
-                              "mouse scroll",
-                              "keyboard press",
-                              "keyboard release",
-                              "user input"]
+        assert event_type in [
+            "mouse move", "mouse click press", "mouse click release",
+            "mouse scroll", "keyboard press", "keyboard release", "user input"
+        ]
         if event_type == "mouse move":
             return MouseMoveAction()
         elif event_type == "mouse click press":
@@ -144,72 +145,58 @@ class Unpack(object):
         event_type = event["event type"]
         event_cls = EventProduct().product(event_type)
         if event_type == "mouse move":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
+            event_cls.time = event["time"]
+            event_cls.window = event["window"]
 
-            event_cls.set_position(event["x"], event["y"])
+            event_cls.position = (event["x"], event["y"])
 
-        elif event_type == "mouse click press":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
+        elif event_type in ["mouse click press", "mouse click release"]:
+            event_cls.time = event["time"]
+            event_cls.window = event["window"]
 
-            event_cls.set_position(event["x"], event["y"])
-            event_cls.set_button(eval(event["button"]))
-
-        elif event_type == "mouse click release":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
-
-            event_cls.set_position(event["x"], event["y"])
+            event_cls.position = (event["x"], event["y"])
 
             button = eval(event["button"])
-            event_cls.set_button(button)
+            assert isinstance(button, Button)
+            event_cls.button = button
 
         elif event_type == "mouse click scroll":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
+            event_cls.time = event["time"]
+            event_cls.window = event["window"]
 
-            event_cls.set_position(event["x"], event["y"])
-            event_cls.set_wheel(event["dx"], event["dy"])
+            event_cls.position = event["x"], event["y"]
+            event_cls.wheel = (event["dx"], event["dy"])
 
-        elif event_type == "keyboard press":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
-
-            try:
-                key = eval(event["key"])
-            except BaseException as e:
-                print(e)
-                key = event["key"]
-            if isinstance(key, int):
-                key = str(key)
-            event_cls.set_key(key)
-
-        elif event_type == "keyboard release":
-            event_cls.set_time(event["time"])
-            event_cls.set_window(event["window"])
+        elif event_type in ["keyboard press", "keyboard release"]:
+            event_cls.time = event["time"]
+            event_cls.window = event["window"]
 
             try:
                 key = eval(event["key"])
-            except BaseException as e:
-                print(e)
+            except (NameError, SyntaxError):
                 key = str(event["key"])
             if isinstance(key, int):
                 key = str(key)
-            event_cls.set_key(key)
+
+            assert isinstance(key, KeyCode) or isinstance(
+                key, Key) or isinstance(key, str)
+            event_cls.key = key
 
         elif event_type == "user input":
-            event_cls.set_time(event["time"])
-            event_cls.set_message(event["message"])
-            event_cls.set_window(event["window"])
+            event_cls.time = event["time"]
+            event_cls.message = event["message"]
+            event_cls.window = event["window"]
 
         return event_cls
 
 
 class LoadFromYaml(object):
     @staticmethod
-    def save_load():
-        with open(software_init.default_record_file, 'r') as events_file_ref:
+    def save_load(script_path=software_config.using_script):
+        os.chdir(software_config.software_dir)
+        os.chdir(software_config.scripts_dir)
+        with open(script_path, 'r') as events_file_ref:
+            # print(events_file_ref)
             print("event loading...")
             return yaml.safe_load(events_file_ref)
 
@@ -224,7 +211,7 @@ class Playback(object):
 
         unpack_method = Unpack().unpack
         action_product_method = ActionProduct().product
-        events = LoadFromYaml().save_load()
+        events = LoadFromYaml().save_load(software_config.using_script)
         last_time = events[0]["time"]
         playback_queue.put("__CONTINUE__")
 
@@ -248,6 +235,8 @@ class Playback(object):
             sleep(0.01)
         interface_queue.put(("__PLAYBACK_QUIT__", None))
         print("playback done")
+        keyboard.Controller().press(Key.f12)
+        keyboard.Controller().release(Key.f12)
 
 
 class KeyboardListener(Thread):

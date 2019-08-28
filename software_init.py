@@ -1,24 +1,24 @@
-# -*- coding: utf-8 -*-
-"""
--------------------------------------------------
-   File Name：     software_init
-   Description :
-   Author :
-   date：          2019/8/13
--------------------------------------------------
-   Change Activity:
-                   2019/8/13:
--------------------------------------------------
-"""
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''
+@File    :   software_init.py
+@Time    :   2019/08/28 09:16:22
+@Author  :   MsterLin
+@Version :   1.0
+@Contact :   15651838825@163.com
+@License :   (C)Copyright 2018-2019, CASIA
+@Desc    :   get software setting from yaml type setting file
+'''
+
+# here put the import lib
+
 __author__ = 'Lyl'
 
 import yaml
 import os
 
-
 SOFTWARE_DIR = os.path.split(__file__)[0]
 CONFIG_FILE = "software_config.yaml"
-os.chdir(SOFTWARE_DIR)
 
 
 # 实现单例模式
@@ -29,22 +29,38 @@ def singleton(cls):
         if cls not in instances:
             instances[cls] = cls(*args, **kwargs)
         return instances[cls]
+
     return wrapper
 
 
 @singleton
 class Init(object):
+    """ Loading software setting from
+        software_config.yaml type setting file
+    """
     def __init__(self):
         self._software_config = SoftwareConfig()
         self.load_config()
-        print("system init done")
-        # ----------------------------------------
+        print("system init done")  # ----------------------------------------
 
     @property
     def software_config(self):
         return self._software_config
 
+    @staticmethod
+    def _load_config():
+        """ loading config from setting file """
+        os.chdir(SOFTWARE_DIR)
+        try:
+            with open(CONFIG_FILE, 'r') as config_file_ref:
+                config = yaml.safe_load(config_file_ref)
+        except FileNotFoundError as e:
+            print(e)
+            raise FileExistsError("文件不存在")
+        return config
+
     def create_dir(self):
+        """ Create log and scripts dir if there are not found."""
         assert self._logging_config is not None
         if not os.path.exists(self._log_dir):
             os.mkdir(self._log_dir)
@@ -52,17 +68,8 @@ class Init(object):
         if not os.path.exists(self._scripts_dir):
             os.mkdir(self._scripts_dir)
 
-    @staticmethod`
-    def _load_config():
-        try:
-            with open(CONFIG_FILE, 'r') as config_file_ref:
-                config = yaml.safe_load(config_file_ref)
-        except (FileExistsError or FileNotFoundError) as e:
-            print(e)
-            raise UserWarning("system init failed: software_config.yaml missing")
-        return config
-
     def load_config(self):
+        """ Loading config from config dictionary """
         config = self._load_config()
         # --------------------------------------------------------
         # 配置文件解析
@@ -73,8 +80,7 @@ class Init(object):
             self.software_config.logging_config = config["logging config"]
         except KeyError as e:
             print(e)
-            raise UserWarning(
-                "system init failed: software_config.yaml missing")
+            raise UserWarning("setting file illegal")
 
         print("software config load done")
 
@@ -135,15 +141,20 @@ class SoftwareConfig(object):
         self._log_dir = log_dir
 
     def dumps(self):
-        config_dict = {"software dir": self.software_dir,
-                       "logging config": self.logging_config,
-                       "log dir": self.log_dir,
-                       "scripts dir": self.scripts_dir,
-                       "using script": self.using_script}
+        config_dict = {
+            "software dir": self.software_dir,
+            "logging config": self.logging_config,
+            "log dir": self.log_dir,
+            "scripts dir": self.scripts_dir,
+            "using script": self.using_script
+        }
         print(config_dict)
 
         with open(CONFIG_FILE, 'w') as config_file_ref:
-            yaml.safe_dump(config_dict, config_file_ref, encoding='utf-8', allow_unicode=True)
+            yaml.safe_dump(config_dict,
+                           config_file_ref,
+                           encoding='utf-8',
+                           allow_unicode=True)
 
 
 if __name__ == '__main__':

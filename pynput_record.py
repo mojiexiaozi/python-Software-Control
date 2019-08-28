@@ -1,80 +1,80 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
----------------------------------------------------------------------
-@Project      :    qq_like
-@File         :    chat_interface.py
-@Contact      :    njust_linyilin@163.com
-@License      :    (C)Copyright 2019-2020, CASI
+# -*- encoding: utf-8 -*-
+'''
+@File    :   pynput_record.py
+@Time    :   2019/08/28 09:33:07
+@Author  :   MsterLin
+@Version :   1.0
+@Contact :   15651838825@163.com
+@License :   (C)Copyright 2018-2019, CASIA
+@Desc    :   None
+'''
 
-@Modify Time      @Author    @Version    @Description
-------------      -------    --------    -----------
-2019/8/26 15:21    kimi      1.0         None
-
-# code is far away from bugs with the god animal protecting
-    I love animals. They taste delicious.
-              ┏┓      ┏┓
-            ┏┛┻━━━┛┻┓
-            ┃      ☃      ┃
-            ┃  ┳┛  ┗┳  ┃
-            ┃      ┻      ┃
-            ┗━┓      ┏━┛
-                ┃      ┗━━━┓
-                ┃  神兽保佑    ┣┓
-                ┃　永无BUG！   ┏┛
-                ┗┓┓┏━┳┓┏┛
-                  ┃┫┫  ┃┫┫
-                  ┗┻┛  ┗┻┛
-"""
-
-import yaml
 from queue import Queue
 from threading import Thread
-from software_init import Init
-from pynput import mouse, keyboard
-import win32gui
 from time import time
-from script_save import SaveEvent
 
+import win32gui
+from pynput import keyboard, mouse
+
+from script_save import SaveEvent
+from software_init import Init
 
 software_config = Init().software_config
 
 
 class Event(object):
+    """ Base event """
     def __init__(self):
-        self.event_type = "event"
+        """
+        @self.event_type : event type
+        @self._window    : window message
+        @self._events    : events
+        @self._time =    : time
+        """
+        self._event_type = "event"
         self._window = None
-        self._event_dict = {}
+        self._events = {}
         self._time = time()
 
-    def set_time(self, now_time):
-        self._time = now_time
+    @property
+    def event_type(self):
+        return self._event_type
+
+    @event_type.setter
+    def event_type(self, event_type):
+        self._event_type = event_type
 
     @property
     def time(self):
         return self._time
 
-    def set_event_dict(self, key_word, value):
+    @time.setter
+    def time(self, now_time):
+        self._time = now_time
+
+    @property
+    def events(self):
+        self.dumps()
+        return self._events
+
+    def add_event(self, key_word, value):
         assert key_word is not None
         assert isinstance(key_word, str)
-        self._event_dict[key_word] = value
-
-    def set_window(self, window):
-        self._window = window
+        self._events[key_word] = value
 
     @property
     def window(self):
         return self._window
 
-    def dumps(self):
-        self._event_dict["window"] = self._window
-        self.set_event_dict("event type", self.event_type)
-        self.set_event_dict("time", self.time)
+    @window.setter
+    def window(self, window):
+        self._window = window
 
-    @property
-    def event_dict(self):
-        self.dumps()
-        return self._event_dict
+    def dumps(self):
+        self._events["window"] = self._window
+        self.add_event("event type", self.event_type)
+        self.add_event("time", self.time)
 
 
 class MouseEvent(Event):
@@ -88,15 +88,15 @@ class MouseEvent(Event):
     def position(self):
         return self._x, self._y
 
-    def set_position(self, x, y):
-        assert isinstance(x, int) and isinstance(y, int)
-        self._x = x
-        self._y = y
+    @position.setter
+    def position(self, position):
+        self._x = position[0]
+        self._y = position[1]
 
     def dumps(self):
         super().dumps()
-        self.set_event_dict("x", self._x)
-        self.set_event_dict("y", self._y)
+        self.add_event("x", self._x)
+        self.add_event("y", self._y)
 
 
 class KeyboardEvent(Event):
@@ -105,23 +105,22 @@ class KeyboardEvent(Event):
         self.event_type = "keyboard event"
         self._key = None
 
-    def set_key(self, key):
-        # assert isinstance(key, keyboard.Key) or isinstance(key, keyboard.KeyCode)
-        self._key = key
-
     @property
     def key(self):
         return self._key
 
+    @key.setter
+    def key(self, key):
+        self._key = key
+
     def dumps(self):
         super().dumps()
-        # assert isinstance(self._key, keyboard.Key) or isinstance(self._key, keyboard.KeyCode)
         print(self._key, type(self._key))
         try:
             key = self._key.char
         except AttributeError:
             key = str(self._key)
-        self.set_event_dict("key", key)
+        self.add_event("key", key)
 
 
 class MouseMove(MouseEvent):
@@ -140,13 +139,14 @@ class MouseClick(MouseEvent):
     def button(self):
         return self._button
 
-    def set_button(self, button):
+    @button.setter
+    def button(self, button):
         assert isinstance(button, mouse.Button)
         self._button = button
 
     def dumps(self):
         super().dumps()
-        self.set_event_dict("button", str(self._button))
+        self.add_event("button", str(self._button))
 
 
 class MouseClickPress(MouseClick):
@@ -168,20 +168,19 @@ class MouseScroll(MouseEvent):
         self._dx = 0
         self._dy = 0
 
-    def set_wheel(self, dx, dy):
-        assert isinstance(dx, int)
-        assert isinstance(dy, int)
-        self._dx = dx
-        self._dy = dy
-
     @property
     def wheel(self):
         return self._dx, self._dy
 
+    @wheel.setter
+    def wheel(self, wheel):
+        self._dx = wheel[0]
+        self._dy = wheel[1]
+
     def dumps(self):
         super().dumps()
-        self.set_event_dict("dx", self._dx)
-        self.set_event_dict("dy", self._dy)
+        self.event("dx", self._dx)
+        self.event("dy", self._dy)
 
 
 class KeyboardPress(KeyboardEvent):
@@ -206,12 +205,13 @@ class UserInputEvent(Event):
     def message(self):
         return self._message
 
-    def set_message(self, message):
+    @message.setter
+    def message(self, message):
         self._message = message
 
     def dumps(self):
         super().dumps()
-        self.set_event_dict("message", self._message)
+        self.event("message", self._message)
 
 
 class Product(object):
@@ -257,13 +257,10 @@ class KeyboardReleaseProduct(Product):
 class EventProduct(object):
     @staticmethod
     def product(event_type):
-        assert event_type in ["mouse move",
-                              "mouse click press",
-                              "mouse click release",
-                              "mouse scroll",
-                              "keyboard press",
-                              "keyboard release",
-                              "user input"]
+        assert event_type in [
+            "mouse move", "mouse click press", "mouse click release",
+            "mouse scroll", "keyboard press", "keyboard release", "user input"
+        ]
         if event_type == "mouse move":
             return MouseMoveProduct().product()
         elif event_type == "mouse click press":
@@ -281,11 +278,9 @@ class EventProduct(object):
 
 
 class Window(object):
-    def __init__(self):
-        self._window = self.get_window()
-
     @property
     def window(self):
+        self._window = self.get_window()
         return self._window
 
     @staticmethod
@@ -297,19 +292,22 @@ class Window(object):
                 class_name = win32gui.GetClassName(handle)
 
                 left, top, right, bottom = win32gui.GetWindowRect(handle)
+            except BaseException as e:
+                print(e)
+
                 width = right - left
                 height = bottom - top
 
-                window_message = {"title": title,
-                                  "class name": class_name,
-                                  "left": left,
-                                  "top": top,
-                                  "width": width,
-                                  "height": height}
+                window_message = {
+                    "title": title,
+                    "class name": class_name,
+                    "left": left,
+                    "top": top,
+                    "width": width,
+                    "height": height
+                }
                 return window_message
 
-            except BaseException as e:
-                print(e)
         else:
             return None
 
@@ -330,8 +328,9 @@ class Listener(object):
 class MouseListener(Listener):
     def on_move(self, x, y):
         mouse_move = MouseMoveProduct().product()
-        mouse_move.set_window(Window().window)
-        mouse_move.set_position(x, y)
+
+        mouse_move.window = Window().window
+        mouse_move.position = (x, y)
         self.record_queue.put(mouse_move)
 
     def on_click(self, x, y, button, pressed):
@@ -340,17 +339,17 @@ class MouseListener(Listener):
         else:
             mouse_click = MouseClickReleaseProduct().product()
 
-        mouse_click.set_window(Window().window)
-        mouse_click.set_position(x, y)
-        mouse_click.set_button(button)
+        mouse_click.window = Window().window
+        mouse_click.position = x, y
+        mouse_click.button = button
         self.record_queue.put(mouse_click)
 
     def on_scroll(self, x, y, dx, dy):
         mouse_scroll = MouseScrollProduct().product()
 
-        mouse_scroll.set_window(Window().window)
-        mouse_scroll.set_position(x, y)
-        mouse_scroll.set_wheel(dx, dy)
+        mouse_scroll.window = Window().window
+        mouse_scroll.position = x, y
+        mouse_scroll.wheel(dx, dy)
         self.record_queue.put(mouse_scroll)
 
     def listener(self):
@@ -363,14 +362,16 @@ class MouseListener(Listener):
 class KeyboardListener(Listener):
     def on_press(self, key):
         keyboard_press = KeyboardPressProduct().product()
-        keyboard_press.set_window(Window().window)
-        keyboard_press.set_key(key)
+
+        keyboard_press.window = Window().window
+        keyboard_press.key = key
         self.record_queue.put(keyboard_press)
 
     def on_release(self, key):
         keyboard_release = KeyboardReleaseProduct().product()
-        keyboard_release.set_window(Window().window)
-        keyboard_release.set_key(key)
+
+        keyboard_release.window = Window().window
+        keyboard_release.key = key
         self.record_queue.put(keyboard_release)
 
     def listener(self):
@@ -400,12 +401,6 @@ class Record(Thread):
 
         self._last_time = -1
 
-    @staticmethod
-    def dump_to_yaml(events):
-        assert isinstance(events, list)
-        with open(software_config.default_record_file, 'w') as f:
-            yaml.safe_dump(events, f, encoding='utf-8', allow_unicode=True)
-
     def run(self):
         event_dict_list = []
         while True:
@@ -418,10 +413,11 @@ class Record(Thread):
                 break
 
             if isinstance(event, Event):
-                event_dict = event.event_dict
+                event_dict = event.events
 
                 print(event.event_type)
-                self._event_handle_queue.put(("__RECORD_EVENT__", event.event_type))
+                self._event_handle_queue.put(
+                    ("__RECORD_EVENT__", event.event_type))
                 event_dict_list.append(event_dict)
         print("quit...")
         SaveEvent().save_to_yaml_file(event_dict_list)
@@ -430,7 +426,8 @@ class Record(Thread):
 class RecordProduct(object):
     @staticmethod
     def product(record_queue=Queue(), event_handle_queue=Queue()):
-        return Record(record_queue=record_queue, event_handle_queue=event_handle_queue)
+        return Record(record_queue=record_queue,
+                      event_handle_queue=event_handle_queue)
 
 
 class LaunchRecord(Thread):
@@ -442,10 +439,13 @@ class LaunchRecord(Thread):
         self._record_queue = record_queue
 
     def run(self):
-        mouse_listener = ListenerProduct.product(monitor_name="mouse", record_queue=self._record_queue)
-        keyboard_listener = ListenerProduct.product(monitor_name="keyboard", record_queue=self._record_queue)
-        recorder = RecordProduct.product(record_queue=self._record_queue,
-                                         event_handle_queue=self._event_handle_queue)
+        mouse_listener = ListenerProduct.product(
+            monitor_name="mouse", record_queue=self._record_queue)
+        keyboard_listener = ListenerProduct.product(
+            monitor_name="keyboard", record_queue=self._record_queue)
+        recorder = RecordProduct.product(
+            record_queue=self._record_queue,
+            event_handle_queue=self._event_handle_queue)
 
         mouse_listener.listener()
         print("mouse listener...")

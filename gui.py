@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
--------------------------------------------------
-   File Name：     gui
-   Description :
-   Author :       
-   date：          2019/8/7
--------------------------------------------------
-   Change Activity:
-                   2019/8/7:
--------------------------------------------------
-"""
-__author__ = 'Lyl'
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+'''
+@File    :   gui.py
+@Time    :   2019/08/27 22:33:11
+@Author  :   MasterLin
+@Version :   1.0
+@Contact :   15651838825@163.com
+@License :   (C)Copyright 2018-2019, CASIA
+@Desc    :   None
+'''
 
-import PySimpleGUI as Gui
+# here put the import lib
+
+__author__ = 'Lyl'
 
 
 class Controls(object):

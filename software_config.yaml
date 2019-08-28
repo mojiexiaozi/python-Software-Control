@@ -41,5 +41,5 @@ logging config:
     level: DEBUG
   version: 1
 scripts dir: script
-software dir: C:\CASI项目管理\CASI003-程序操控\CASI003
-using script: ''
+software dir: 
+using script: '20190828_104652.yaml'
