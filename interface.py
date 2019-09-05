@@ -13,6 +13,7 @@
 __author__ = 'Lyl'
 from gui import Controls, Layouts
 import PySimpleGUI as Gui
+from software_init import Init
 
 Gui.ChangeLookAndFeel('GreenTan')
 
@@ -62,26 +63,17 @@ class MainInterface(Interface):
     def design_window(self):
         controls = Controls()
 
-        menu_def = [
-            ['File', ['Open', '-', 'Save', 'Exit', 'Properties']],
-            [
-                'Edit',
-                ['Paste', [
-                    'Special',
-                    'Normal',
-                ], 'Undo'],
-            ],
-            ['Help', 'About...'],
-        ]
+        menu_def = [['File', ['Open', 'Save', 'Exit', 'Properties']],
+                    ['Edit', ['Paste', 'Undo']],
+                    ['Help', 'About...']]
 
-        controls.pack(
-            Gui.Menu(menu_definition=menu_def, tearoff=False, key="__MENU__"))
+        controls.pack(Gui.Menu(menu_definition=menu_def, tearoff=False, key="__MENU__"))
 
         self.layouts.pack(controls)
 
         controls.empty()
         controls.pack(
-            Gui.Text('WelCome!',
+            Gui.Text(text="using script:{0}".format(Init().software_config.using_script),
                      key='__MESSAGE__',
                      size=[40, 1],
                      font=("Helvetica", 18)))
@@ -119,7 +111,7 @@ class PlaybackInterface(Interface):
     def design_window(self):
         controls = Controls()
         controls.pack(
-            Gui.Text('',
+            Gui.Text(text="using script:{0}".format(Init().software_config.using_script),
                      key='__MESSAGE__',
                      size=[40, 1],
                      font=("Helvetica", 18)))
@@ -147,7 +139,7 @@ class RecordingInterface(Interface):
     def design_window(self):
         controls = Controls()
         controls.pack(
-            Gui.Text('',
+            Gui.Text(text='Click start button to start record.',
                      key='__MESSAGE__',
                      size=[40, 1],
                      font=("Helvetica", 18)))
@@ -156,12 +148,12 @@ class RecordingInterface(Interface):
         controls = Controls()
         controls.pack(Gui.T(' ' * 20))
         controls.pack(
-            Gui.Button('start record',
+            Gui.Button(button_text='start record',
                        key='__START_STOP__',
                        font=("Helvetica", 18),
                        size=(12, 1)))
         controls.pack(
-            Gui.Button('quit',
+            Gui.Button(button_text='quit',
                        disabled=False,
                        key="__QUIT__",
                        font=("Helvetica", 18),
@@ -177,7 +169,10 @@ class ReviewInterface(Interface):
         controls = Controls()
         font = ("Helvetica", 18)
         controls.pack(
-            Gui.Text('events', size=(40, 1), key="__EVENTS__", font=font))
+            Gui.Text(text="script",
+                     size=(80, 1),
+                     key="__EVENTS__",
+                     font=font))
         self.layouts.pack(controls)
 
         controls = Controls()

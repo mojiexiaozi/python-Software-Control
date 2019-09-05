@@ -23,15 +23,27 @@ from queue import Queue
 
 from pynput_record import EventProduct, Event, UserInputEvent
 from time import sleep
+from log import Logger
 import os
 
+from script_setup import *
+
 software_config = Init().software_config
+logger = Logger().get_logger(__name__)
 assert isinstance(software_config, SoftwareConfig)
 
 
 class Action(object):
     def __init__(self):
-        self.controller = None
+        self._controller = None
+
+    @property
+    def controller(self):
+        return self._controller
+
+    @controller.setter
+    def controller(self, controller):
+        self._controller = controller
 
     def action(self, event):
         assert isinstance(event, Event)
@@ -195,29 +207,40 @@ class LoadFromYaml(object):
     def save_load(script_path=software_config.using_script):
         os.chdir(software_config.software_dir)
         os.chdir(software_config.scripts_dir)
+        if not os.path.exists(script_path):
+            logger.warning("{0} does not exists".format(script_path))
+            return None
+
         with open(script_path, 'r') as events_file_ref:
             # print(events_file_ref)
             print("event loading...")
             return yaml.safe_load(events_file_ref)
 
 
-class Playback(object):
-    @staticmethod
-    def run(playback_queue, interface_queue):
-        # assert isinstance(playback_queue, Queue)
-        # assert isinstance(interface_queue, Queue)
+class Playback(Thread):
+    def __init__(self, this_queue: Queue):
+        super().__init__()
+        self._this_queue = this_queue
 
-        KeyboardListener(playback_queue=playback_queue).start()
+    @property
+    def this_queue(self):
+        return self._this_queue
+
+    def run(self) -> None:
+        keyboard_listener = KeyboardListener(playback_queue=self.this_queue)
+        keyboard_listener.setDaemon(True)
+        keyboard_listener.start()
 
         unpack_method = Unpack().unpack
         action_product_method = ActionProduct().product
-        events = LoadFromYaml().save_load(software_config.using_script)
-        last_time = events[0]["time"]
-        playback_queue.put("__CONTINUE__")
+        script = LoadFromYaml().save_load(software_config.using_script)
+        events = script["script"]
 
-        event_cls = None
+        self.this_queue.put("__CONTINUE__")
+
+        # event_cls = None
         for event in events:
-            command = playback_queue.get()
+            command = self.this_queue.get()
             if command == "__PLAYBACK_QUIT__":
                 break
             elif command == "__CONTINUE__":
@@ -226,17 +249,10 @@ class Playback(object):
                 action = action_product_method(event_cls.event_type)
                 action.action(event_cls)
 
-                delay_time = (event["time"] - last_time)
-                last_time = event["time"]
-                sleep(delay_time)
+                self._this_queue.put("__CONTINUE__")
             # print("delay time:{0}".format(delay_time))
-            interface_queue.put(("__PLAYBACK_MOTION__", event_cls.event_type))
-            playback_queue.put("__CONTINUE__")
-            sleep(0.01)
-        interface_queue.put(("__PLAYBACK_QUIT__", None))
+            sleep(event["time"] + 0.005)
         print("playback done")
-        keyboard.Controller().press(Key.f12)
-        keyboard.Controller().release(Key.f12)
 
 
 class KeyboardListener(Thread):
@@ -246,7 +262,7 @@ class KeyboardListener(Thread):
         self._playback_queue = playback_queue
 
     def on_press(self, key):
-        if key == keyboard.Key.f12:
+        if key == keyboard.Key.f11:
             self._playback_queue.put("__PLAYBACK_QUIT__")
             print("user quit playback")
             return False
@@ -256,19 +272,20 @@ class KeyboardListener(Thread):
             listener.join()
 
 
-class LaunchPlayback(Thread):
-    def __init__(self, playback_queue, interface_queue=None):
-        super().__init__()
-        self._playback_queue = playback_queue
-        self._interface_queue = interface_queue
-
-    def run(self):
-        Playback().run(playback_queue=self._playback_queue,
-                       interface_queue=self._interface_queue)
-        self._interface_queue.put(("__PLAYBACK_QUIT__", None))
+# class LaunchPlayback(Thread):
+#     def __init__(self, playback_queue, interface_queue=None):
+#         super().__init__()
+#         self._playback_queue = playback_queue
+#         self._interface_queue = interface_queue
+#
+#     def run(self):
+#         Playback().run(playback_queue=self._playback_queue,
+#                        interface_queue=self._interface_queue)
+#         self._interface_queue.put(("__PLAYBACK_QUIT__", None))
 
 
 if __name__ == '__main__':
-    launcher = LaunchPlayback(Queue(), Queue())
-    launcher.start()
-    launcher.join()
+    pass
+    # launcher = LaunchPlayback(Queue(), Queue())
+    # launcher.start()
+    # launcher.join()

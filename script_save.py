@@ -17,14 +17,16 @@ from software_init import Init
 import yaml
 import os
 from datetime import datetime
+from log import Logger
 
 software_config = Init().software_config
+logger = Logger().get_logger(__name__)
 
 
 class SaveEvent(object):
     """ Save script """
     @staticmethod
-    def save_to_yaml_file(event_dict_list):
+    def save_to_yaml_file(event_dict_list, file_name=None):
         assert isinstance(event_dict_list, list)
 
         if event_dict_list:
@@ -33,13 +35,16 @@ class SaveEvent(object):
             script_dir = software_config.scripts_dir
             os.chdir(software_config.software_dir)
 
-            print("software dir:%s" % software_config.software_dir)
+            logger.info("software dir:%s" % software_config.software_dir)
             os.chdir(script_dir)
-            script_name = "{0}.yaml".format(
-                datetime.now().strftime("%Y%m%d_%H%M%S"))
 
-            with open(script_name, 'w') as file_ref:
-                yaml.safe_dump(event_dict_list,
+            if file_name is None:
+                file_name = "{0}.yaml".format(
+                    datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+            with open(file_name, 'w') as file_ref:
+                script = {"script": event_dict_list}
+                yaml.safe_dump(script,
                                file_ref,
                                encoding='utf-8',
                                allow_unicode=True)

@@ -3,7 +3,7 @@
 -------------------------------------------------
    File Name：     interface_event
    Description :
-   Author :       
+   Author :
    date：          2019/8/21
 -------------------------------------------------
    Change Activity:
@@ -38,6 +38,7 @@ class InterfaceEvent(object):
     """
     界面事件虚类
     """
+
     def __init__(self, window, event_handle_queue):
         """
         :param window: PySimpleGui 窗口类实例
@@ -67,6 +68,7 @@ class InterfaceEventMonitor(InterfaceEvent):
     """
     界面事件监控类
     """
+
     def run(self):
         """
         界面事件监控线程
@@ -91,6 +93,7 @@ class InterfaceEventMonitor(InterfaceEvent):
 # -------------------------------------------------- #
 class InterfaceEventHandle(InterfaceEvent, Thread):
     """界面事件处理类"""
+
     def __del__(self):
         print("interface event handle class release")
 
@@ -109,6 +112,7 @@ class MainInterfaceEventHandle(InterfaceEventHandle):
     """
     主界面事件处理
     """
+
     def run(self) -> None:
         print("MainInterfaceEventHandle thread start")
         while True:
@@ -146,9 +150,11 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
     """
     脚本查看界面事件处理
     """
+
     def run(self) -> None:
         print("ReviewInterfaceEventHandle thread start")
         event_cls_list = None
+        choose_script_file_name = ""
         user_input_event_list = None
         while True:
             event, event_message = self.event_handle_queue.get()
@@ -157,32 +163,38 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
             if event in (None, "__QUIT__"):
                 break
             elif event == "__LOAD_EVENTS__":
-                initialdir = os.path.join(software_config.software_dir,
-                                          software_config.scripts_dir)
+                initial_dir = os.path.join(software_config.software_dir,
+                                           software_config.scripts_dir)
                 choose_script_path = Gui.filedialog.askopenfilename(
-                    initialdir=initialdir,
+                    initialdir=initial_dir,
+                    initialfile=software_config.using_script,
                     title="please choose a events file",
                     defaultextension="yaml",
                     filetypes=[("default", ".yaml"), ("events txt", ".txt")])
-                # with open(file_name, 'r') as file_ref:
-                #     events = yaml.safe_load(file_ref)
-                #     # print(events)
-                #     self._gui.Element("__EVENTS_MESSAGE__").Update(events)
-                extractor_message = LaunchExtractor().do(choose_script_path)
-                if extractor_message:
-                    user_input_message = extractor_message[0]
-                    event_cls_list = extractor_message[1]
-                    user_input_event_list = extractor_message[2]
-                    # print(user_input_message)
-                    self.window.Element("__EVENTS_MESSAGE__").Update(
-                        user_input_message)
+
+                if os.path.exists(choose_script_path):
+                    choose_script_file_name = os.path.split(choose_script_path)[1]
+                    self.window.Element("__EVENTS__").Update("choose script >> {0}".format(choose_script_file_name))
+                    extractor_message = LaunchExtractor().do(choose_script_path)
+
+                    if extractor_message:
+                        user_input_message = extractor_message[0]
+                        event_cls_list = extractor_message[1]
+                        user_input_event_list = extractor_message[2]
+                        # print(user_input_message)
+                        self.window.Element("__EVENTS_MESSAGE__").Update(
+                            user_input_message)
+
             elif event == "__SAVE__":
                 message = event_message["__EVENTS_MESSAGE__"]
-                message_list = re.split(pattern="\n", string=message)
+                pattern = re.compile(r'>>(.*)')
+                message_list = re.findall(pattern=pattern, string=message)
+                if message_list:
+                    message_list = [temp.strip() for temp in message_list]
 
                 for i in range(len(user_input_event_list)):
                     try:
-                        user_input_event_list[i].set_message(message_list[i])
+                        user_input_event_list[i].message = message_list[i]
                     except IndexError:
                         pass
 
@@ -192,11 +204,11 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
 
                 if event_cls_list:
                     event_dict_list = [
-                        event.event_dict for event in event_cls_list
-                    ]
-                    SaveEvent.save_to_yaml_file(event_dict_list)
+                        event.events for event in event_cls_list]
+                    SaveEvent.save_to_yaml_file(event_dict_list=event_dict_list,
+                                                file_name=choose_script_file_name)
 
-            print("event: {0} value: {1}".format(event, event_message))
+            # print("event: {0} value: {1}".format(event, event_message))
 
         self.window.Close()
 
@@ -206,6 +218,7 @@ class ReviewInterfaceEventHandle(InterfaceEventHandle):
 # -------------------------------------------------- #
 class PlaybackInterfaceEventHandle(InterfaceEventHandle):
     """记录界面事件处理"""
+
     def start_play(self, playback_queue):
         # assert isinstance(playback_queue, Queue)
 
@@ -227,7 +240,7 @@ class PlaybackInterfaceEventHandle(InterfaceEventHandle):
         play_queue = None
         while True:
             event, event_message = self.event_handle_queue.get()
-            print(event, event_message)
+            # print(event, event_message)
             if event in (None, "__QUIT__"):
                 break
             elif event == "__START_STOP__":
@@ -266,6 +279,7 @@ class PlaybackInterfaceEventHandle(InterfaceEventHandle):
 # -------------------------------------------------- #
 class RecordInterfaceEventHandle(InterfaceEventHandle):
     """回放界面事件处理"""
+
     def start_record(self, record_queue):
         # assert isinstance(record_queue, Queue)
 
@@ -288,7 +302,7 @@ class RecordInterfaceEventHandle(InterfaceEventHandle):
         while True:
             # print(1)
             event, event_message = self.event_handle_queue.get()
-            print(event, event_message)
+            # print(event, event_message)
             if event in [None, "__QUIT__"]:
                 break
             elif event == "__START_STOP__":
@@ -332,8 +346,8 @@ class LaunchMainInterface(Process):
         win = main_interface.window
 
         event_handle_queue = Queue()
-        monitor = InterfaceEventMonitor(window=win,
-                                        event_handle_queue=event_handle_queue)
+        monitor = InterfaceEventMonitor(
+            window=win, event_handle_queue=event_handle_queue)
         handle = MainInterfaceEventHandle(
             window=win, event_handle_queue=event_handle_queue)
 

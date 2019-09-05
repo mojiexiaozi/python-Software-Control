@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
 """
--------------------------------------------------
-   File Name：     main.py
-   Description :
-   Author :
-   date：          2019/8/20
--------------------------------------------------
-   Change Activity:
-                   2019/8/20:
--------------------------------------------------
+@File    :   main.py
+@Time    :   2019/08/29 09:32:02
+@Author  :   MasterLin
+@Version :   1.0
+@Contact :   15651838825@163.com
+@License :   (C)Copyright 2018-2019, CASI
+@Desc    :   None
 """
-__author__ = 'Lyl'
+
+# here put the import lib
 
 
 from interface_event import LaunchMainInterface

@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-'''
+"""
 @File    :   software_init.py
 @Time    :   2019/08/28 09:16:22
-@Author  :   MsterLin
+@Author  :   MasterLin
 @Version :   1.0
 @Contact :   15651838825@163.com
-@License :   (C)Copyright 2018-2019, CASIA
+@License :   (C)Copyright 2018-2019, CASI
 @Desc    :   get software setting from yaml type setting file
-'''
+"""
 
 # here put the import lib
 
@@ -148,8 +148,8 @@ class SoftwareConfig(object):
             "scripts dir": self.scripts_dir,
             "using script": self.using_script
         }
-        print(config_dict)
-
+        # print(config_dict)
+        os.chdir(SOFTWARE_DIR)
         with open(CONFIG_FILE, 'w') as config_file_ref:
             yaml.safe_dump(config_dict,
                            config_file_ref,
