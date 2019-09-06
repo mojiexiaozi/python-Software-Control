@@ -18,6 +18,7 @@ from software_init import Init
 import os
 
 software_config = Init().software_config
+print(software_config.software_dir)
 
 
 def singleton(cls):

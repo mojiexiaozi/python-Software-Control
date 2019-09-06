@@ -269,6 +269,7 @@ class FileDialog(QFileDialog):
             user_input_message = extractor_message[0]
             user_input_message = "<script>\nscript@{0}\n{1}</script>".format(
                 file_name, user_input_message)
+            user_input_message = self.parent.script_head + user_input_message
             logger.info(user_input_message)
             # self.parent.text_edit.setText(user_input_message)
             self.parent.text_edit.setPlainText(user_input_message)
@@ -372,6 +373,9 @@ class MainInterface(QMainWindow):
         # --------------------------------------------------
         # text edit
         self.text_edit = TextEdit(self)
+        self.script_head = "<head>\n{0}\n{1}\n{2}\n{3}\n</head>\n".format(
+            "script_list = range(1)", "script_index = 1",
+            "script_delay = 1000", "script_var1 = [10, 20, 30]")
 
         # --------------------------------------------
         # load ui

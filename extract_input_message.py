@@ -218,10 +218,10 @@ class LaunchExtractor(object):
     def do(script_path):
         unpack_method = Unpack().unpack
         script = LoadFromYaml().save_load(script_path=script_path)
-        events = script["script"]
-        if events is None:
+        if script is None:
             logger.warning("events is empty")
             return None
+        events = script["script"]
         event_cls_list = [unpack_method(event) for event in events]
         # logger.info(event_cls_list)
 

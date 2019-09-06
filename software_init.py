@@ -2,22 +2,21 @@
 # -*- encoding: utf-8 -*-
 """
 @File    :   software_init.py
-@Time    :   2019/08/28 09:16:22
+@Time    :   2019/09/05 18:11:29
 @Author  :   MasterLin
 @Version :   1.0
 @Contact :   15651838825@163.com
 @License :   (C)Copyright 2018-2019, CASI
-@Desc    :   get software setting from yaml type setting file
+@Desc    :   None
 """
 
 # here put the import lib
-
-__author__ = 'Lyl'
-
 import yaml
 import os
+import sys
 
-SOFTWARE_DIR = os.path.split(__file__)[0]
+SOFTWARE_DIR = os.path.split(sys.argv[0])[0]
+print(SOFTWARE_DIR)
 CONFIG_FILE = "software_config.yaml"
 
 
@@ -41,6 +40,7 @@ class Init(object):
     def __init__(self):
         self._software_config = SoftwareConfig()
         self.load_config()
+        self.create_dir()
         print("system init done")  # ----------------------------------------
 
     @property
@@ -61,12 +61,12 @@ class Init(object):
 
     def create_dir(self):
         """ Create log and scripts dir if there are not found."""
-        assert self._logging_config is not None
-        if not os.path.exists(self._log_dir):
-            os.mkdir(self._log_dir)
+        assert self.software_config is not None
+        if not os.path.exists(self.software_config.log_dir):
+            os.mkdir(self.software_config.log_dir)
 
-        if not os.path.exists(self._scripts_dir):
-            os.mkdir(self._scripts_dir)
+        if not os.path.exists(self.software_config.scripts_dir):
+            os.mkdir(self.software_config.scripts_dir)
 
     def load_config(self):
         """ Loading config from config dictionary """

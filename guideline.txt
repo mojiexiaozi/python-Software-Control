@@ -1,1 +1,23 @@
-run_iter = range(10)
+<head>
+script_list =range(10) # range or iterabale
+script_index = script_list[1]
+script_delay = 1000
+script_var1 = [10, 20, 30, 40, 50, 60]
+script_var2 = script_list  # script_var1~script_var10
+</head>
+
+<body>
+<script>
+delay = 1000
+
+script@Example >> script_index
+script@Example >>  script_var1[script_index]
+script@Example >> 'hello{0}.py'.format(script_index)
+</script>
+
+<script>
+script@Example >> script_index
+script@Example >>  script_var1[script_index]
+script@Example >> 'hello{0}.py'.format(script_index)
+</script>
+</body>
