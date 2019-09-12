@@ -12,7 +12,6 @@
 
 # here put the import lib
 
-
 from software_init import Init
 import yaml
 import os
@@ -26,12 +25,10 @@ logger = Logger().get_logger(__name__)
 class SaveEvent(object):
     """ Save script """
     @staticmethod
-    def save_to_yaml_file(event_dict_list, file_name=None):
-        assert isinstance(event_dict_list, list)
+    def save_to_yaml_file(script, file_name=None):
+        assert isinstance(script, dict)
 
-        if event_dict_list:
-            assert isinstance(event_dict_list[0], dict)
-
+        if script:
             script_dir = software_config.scripts_dir
             os.chdir(software_config.software_dir)
 
@@ -43,7 +40,6 @@ class SaveEvent(object):
                     datetime.now().strftime("%Y%m%d_%H%M%S"))
 
             with open(file_name, 'w') as file_ref:
-                script = {"script": event_dict_list}
                 yaml.safe_dump(script,
                                file_ref,
                                encoding='utf-8',

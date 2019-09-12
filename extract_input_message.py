@@ -10,6 +10,7 @@
 @Desc    :   None
 """
 from pynput.keyboard import Key
+from script_save import SaveEvent
 
 from string import ascii_lowercase
 from pynput_playback import LoadFromYaml, Unpack
@@ -248,6 +249,33 @@ class LaunchExtractor(object):
             user_input_event = [user_input_event]
             event_cls_list = (event_cls_list[:start_index] + user_input_event +
                               event_cls_list[stop_index + 1:])
+        event_dict_list = [event.events for event in event_cls_list]
+        # logger.info(event_dict_list)
+        script = {"script": event_dict_list}
+        script = {"script": event_dict_list}
+        # logger.info(script)
+        SaveEvent().save_to_yaml_file(script=script, file_name=script_path)
+        return event_cls_list
+
+
+class GetEventMessage(object):
+    @staticmethod
+    def get_event_message(script_path=None):
+        logger = Logger().get_logger()
+        if script_path is None:
+            logger.warning("script path is empty!")
+
+        script = LoadFromYaml().save_load(script_path=script_path)
+        if not script:
+            logger.error("script file:{0} load failed".format(script_path))
+            return ""
+
+        try:
+            script_conf = script["script config"]
+            # logger.info(script_conf)
+            return script_conf
+        except KeyError:
+            event_cls_list = LaunchExtractor().do(script_path=script_path)
 
         message = ""
         user_input_event_list = []
@@ -257,13 +285,27 @@ class LaunchExtractor(object):
                 user_input_event_list.append(event)
                 user_message = "input@{0} >> {1}".format(
                     event.window["class name"], event.message)
-                logger.info(user_message)
+                # logger.info(user_message)
                 message += user_message
                 message += '\n'
+        message_body = "<script>\n"
+        message_body += "delay=1\n"
+        message_body += "script@{0}\n".format(script_path)
+        message_body += message
+        message_body += "</script>\n"
+        logger.error(message_body)
+        message_head = "<head>\n"
+        message_head += "script_list = range(1)\n"
+        message_head += "script_index = script_list[1]\n"
+        message_head += "script_delay = 1\n"
+        message_head += "</head>\n"
+        return message_head + message_body
 
-        return message, event_cls_list, user_input_event_list
 
+# class SaveExtrator(object):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
 
-if __name__ == '__main__':
-    user_input_message = LaunchExtractor().do()
-    print(user_input_message)
+# if __name__ == '__main__':
+#     user_input_message = LaunchExtractor().do()
+#     print(user_input_message)

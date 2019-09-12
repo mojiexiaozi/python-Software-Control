@@ -20,8 +20,10 @@ from pynput import keyboard, mouse
 
 from script_save import SaveEvent
 from software_init import Init
+from log import Logger
 
 software_config = Init().software_config
+logger = Logger().get_logger(__name__)
 
 
 class Event(object):
@@ -309,7 +311,8 @@ def get_window():
 
             left, top, right, bottom = win32gui.GetWindowRect(handle)
         except BaseException as e:
-            print(e)
+            logger.warning(e)
+            logger.warning(type(e))
 
         width = right - left
         height = bottom - top
@@ -439,15 +442,16 @@ class Record(Thread):
                     break
 
             if isinstance(event, Event):
-                print("debug-{0}".format(event.event_type))
+                logger.info("event_type: {0}".format(event.event_type))
                 event_dict = event.events
                 # print(event.event_type)
                 # self._event_handle_queue.put(
                 #     ("__RECORD_EVENT__", event.event_type))
                 event_dict_list.append(event_dict)
-        print("quit...")
+        logger.info("quit...")
         event_dict_list = TimeDelay.get_time(event_dict_list)
-        SaveEvent().save_to_yaml_file(event_dict_list)
+        script = {"script": event_dict_list}
+        SaveEvent().save_to_yaml_file(script)
 
 
 class TimeDelay(object):
@@ -498,7 +502,6 @@ class TimeDelay(object):
 #         recorder.join()
 #         print("record done")
 #         self._event_handle_queue.put(("__RECORD_QUIT__", None))
-
 
 if __name__ == '__main__':
     pass

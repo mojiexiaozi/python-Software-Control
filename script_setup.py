@@ -16,115 +16,99 @@
 # ---------------------------------------------------
 # module import
 import re
+from log import Logger
+import os
+from software_init import Init
+
+logger = Logger().get_logger(__name__)
+software_config = Init().software_config
+
 
 # ----------------------------------------------------
-# script variable
-script_delay = 1000
-script_list = range(10)
-script_index = 0
-script_var1 = 0
-script_var2 = 0
-script_var3 = 0
-script_var4 = 0
-script_var5 = 0
-script_var6 = 0
-script_var7 = 0
-script_var8 = 0
-script_var9 = 0
-script_var10 = 0
-
-delay = 1000
-
-SCRIPT_VAR = {
-    'script_delay': "",
-    'script_list': "",
-    'script_index': "",
-    'script_var1': "",
-    'script_var2': "",
-    'script_var3': "",
-    'script_var4': "",
-    'script_var5': "",
-    'script_var6': "",
-    'script_var7': "",
-    'script_var8': "",
-    'script_var9': "",
-    'script_var10': "",
-    'delay': ""
-}
-
-
 def get_pattern_from_name(name: str):
     pattern = r'<{0}>(.*?)</{0}>'.format(name)
     return re.compile(pattern, re.S)
 
 
-def get_head(script: str):
-    head = get_pattern_from_name("head").findall(script)[0]
+def get_head_val_string(script_string: str):
+    SCRIPT_HEAD_VAR_STRING = {
+        'script_delay': "",
+        'script_list': "",
+        'script_index': "",
+        'script_val1': "",
+        'script_val2': "",
+        'script_val3': "",
+        'script_val4': "",
+        'script_val5': "",
+        'script_val6': "",
+        'script_val7': "",
+        'script_val8': "",
+        'script_val9': "",
+        'script_val10': ""
+    }
+    head = get_pattern_from_name("head").findall(script_string)[0]
     pattern = r"{0}[\s]*=[\s]*(.*)"
-    # print(head)
-    for var in SCRIPT_VAR:
-        SCRIPT_VAR[var] = re.findall(pattern.format(var), head)
 
-    for var in SCRIPT_VAR:
-        if SCRIPT_VAR[var]:
-            try:
-                value = eval(SCRIPT_VAR[var][0])
-                SCRIPT_VAR[var] = value
-            except NameError as e:
-                print(e)
-    # print(SCRIPT_VAR)
+    get_dict = {}
+    for var_string in SCRIPT_HEAD_VAR_STRING:
+        find = re.findall(pattern.format(var_string), head)
+        if find:
+            get_dict[var_string] = find[0]
+    # logger.info(get_dict)
+    return get_dict
 
 
-def update_script_value():
-    global script_delay
-    global script_list
-    global script_index
-    global script_var1
-    global script_var2
-    global script_var3
-    global script_var4
-    global script_var5
-    global script_var6
-    global script_var7
-    global script_var8
-    global script_var9
-    global script_var10
-    global delay
+def get_script_string(script_string: str):
+    script_strings = get_pattern_from_name("script").findall(script_string)
+    # logger.info(script_strings)
+    run_scripts = []
+    for script_string in script_strings:
+        # find all setting of script
+        delay = re.findall(r"delay[\s]*=[\s]*([0-9]*)", script_string)
+        if delay:
+            delay = delay[0]
+        else:
+            delay = '1000'
 
-    script_delay = SCRIPT_VAR['script_delay']
-    script_list = SCRIPT_VAR['script_list']
-    script_index = SCRIPT_VAR["script_index"]
-    delay = SCRIPT_VAR["delay"]
+        script_name = re.findall(r"script@(.*)", script_string)
+        if script_name:
+            script_name = script_name[0]
+        else:
+            logger.error("script name must be define")
 
-    script_var1 = SCRIPT_VAR["script_var1"]
-    script_var2 = SCRIPT_VAR["script_var2"]
-    script_var3 = SCRIPT_VAR["script_var3"]
-    script_var4 = SCRIPT_VAR["script_var4"]
-    script_var5 = SCRIPT_VAR["script_var5"]
-    script_var6 = SCRIPT_VAR["script_var6"]
-    script_var7 = SCRIPT_VAR["script_var7"]
-    script_var8 = SCRIPT_VAR["script_var8"]
-    script_var9 = SCRIPT_VAR["script_var9"]
-    script_var10 = SCRIPT_VAR["script_var10"]
+        script_input_strings = re.findall(r"input@(.*)", script_string)
+        script_inputs = []
+        for script_input_string in script_input_strings:
+            script_input = re.findall(r"[.]*>>[\s]*(.*)", script_input_string)
+            if script_input:
+                script_inputs.append(script_input[0])
+            else:
+                script_inputs.append("")
+
+        run_script = {
+            "delay": delay,
+            "script_name": script_name,
+            "script_inputs": script_inputs
+        }
+        run_scripts.append(run_script)
+    # logger.info(run_scripts)
+    return run_scripts
+
+
+def get_script_setting(script_string: str):
+    head = get_head_val_string(script_string)
+    scripts = get_script_string(script_string)
+    script_setting = {'head': head, 'scripts': scripts}
+    logger.info(script_setting)
+    return script_setting
 
 
 if __name__ == '__main__':
-    with open('guideline.txt', 'r') as f:
+    file_path = os.path.join(software_config.software_dir, "guideline.txt")
+    print(file_path)
+    with open(file_path, 'r') as f:
         test = f.read()
-    get_head(test)
-    update_script_value()
-
-    print("script val 1: {0}".format(script_var1))
-    print("script val 2: {0}".format(script_var2))
-    print("script val 3: {0}".format(script_var3))
-    print("script val 4: {0}".format(script_var4))
-    print("script val 5: {0}".format(script_var5))
-    print("script val 6: {0}".format(script_var6))
-    print("script val 7: {0}".format(script_var7))
-    print("script val 8: {0}".format(script_var8))
-    print("script val 9: {0}".format(script_var9))
-    print("script val 10: {0}".format(script_var10))
-    print("delay : {0}".format(delay))
-    print("script : {0}".format(script_delay))
-    print("script list : {0}".format(script_list))
-    print("script index : {0}".format(script_index))
+    get_script_setting(test)
+    pattern = re.compile(r'<{0}>.*</{0}>'.format('script'), re.S)
+    print(test)
+    print(pattern.findall(test))

@@ -108,4 +108,3 @@ venv.bak/
 *.yaml
 !software_config.yaml
 guideline.txt
-guideline.txt

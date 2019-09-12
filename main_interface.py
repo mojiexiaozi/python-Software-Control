@@ -26,12 +26,13 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QDir
 from queue import Queue
 
-from extract_input_message import LaunchExtractor
+from extract_input_message import GetEventMessage
 from pynput_record import Record
 from pynput_playback import Playback
 from script_save import SaveEvent
 from software_init import Init
 from log import Logger
+from pynput_playback import LoadFromYaml
 
 logger = Logger().get_logger(__name__)
 
@@ -57,6 +58,18 @@ class OpenAction(QAction):
 
         self.setShortcut('Ctrl+O')
         self.setStatusTip('Open script file.')
+        # self.triggered.connect(parent.close)
+
+
+class AddAction(QAction):
+    def __init__(self, parent):
+        super().__init__(parent)
+        assert isinstance(parent, QMainWindow)
+        self.setIcon(QIcon('icon/add.svg'))
+        self.setText('Add')
+
+        self.setShortcut('Ctrl+=')
+        self.setStatusTip('add script file.')
         # self.triggered.connect(parent.close)
 
 
@@ -127,7 +140,7 @@ class StopPlayAction(QAction):
         self.setIcon(QIcon('icon/stop.svg'))
         self.setText('Stop Play')
 
-        self.setShortcut('F11')
+        self.setShortcut('F12')
         self.setStatusTip('Stop Play Script.')
         # self.triggered.connect(parent.close)
 
@@ -136,8 +149,8 @@ class MenuBar(QMenuBar):
     def __init__(self, parent):
         super().__init__(parent)
         self.file_menu = self.addMenu('File')
-        self.file_menu.addActions(
-            (parent.open_action, parent.save_action, parent.save_as_action))
+        self.file_menu.addActions((parent.open_action, parent.add_action,
+                                   parent.save_action, parent.save_as_action))
         self.file_menu.setStatusTip("Script")
 
         # ------------------------------------------------------------------------------
@@ -161,7 +174,8 @@ class ToolBar(QToolBar):
         super().__init__(parent)
         self.file_tool_bar = parent.addToolBar('File')
         self.file_tool_bar.addActions(
-            (parent.open_action, parent.save_action, parent.save_as_action))
+            (parent.open_action, parent.add_action, parent.save_action,
+             parent.save_as_action))
 
         self.motion_tool_bar = parent.addToolBar('Motion')
         self.motion_tool_bar.addActions(
@@ -263,16 +277,39 @@ class FileDialog(QFileDialog):
             else:
                 logger.warning("open cancel")
 
+    def add_script(self, file_name=''):
+        file_name = self.getOpenFileName(caption="add Script", filter='*.yaml')
+        if file_name:
+            file_name = os.path.split(file_name[0])[1]
+            # logger.info(file_name, self.parent.software_config.using_script)
+            # if file_name == self.parent.software_config.using_script:
+            #     return None
+            current_message = self.parent.text_edit.toPlainText()
+            add_message = GetEventMessage().get_event_message(file_name)
+            logger.info(add_message)
+            if add_message:
+                pattern = re.compile(r'<{0}>.*</{0}>'.format('script'), re.S)
+                script_message = pattern.findall(add_message)
+                logger.info(script_message)
+                if script_message:
+                    add_message = script_message[0]
+                current_message = "{0}\n{1}".format(current_message,
+                                                    add_message)
+                self.parent.text_edit.setPlainText(current_message)
+
     def extractor(self, file_name):
-        extractor_message = LaunchExtractor().do(file_name)
+        extractor_message = GetEventMessage().get_event_message(file_name)
         if extractor_message:
-            user_input_message = extractor_message[0]
-            user_input_message = "<script>\nscript@{0}\n{1}</script>".format(
-                file_name, user_input_message)
-            user_input_message = self.parent.script_head + user_input_message
-            logger.info(user_input_message)
+            # user_input_message = extractor_message[0]
+            # format_string = "<script>\n{0}\nscript@{1}\n{2}<script>"
+            # user_input_message = format_string.format("delay=1000",
+            #                                           file_name,
+            #                                           user_input_message)
+            # user_input_message = self.parent.s cript_head+user_input_message
+            # logger.info(user_input_message)
             # self.parent.text_edit.setText(user_input_message)
-            self.parent.text_edit.setPlainText(user_input_message)
+            # logger.error(extractor_message)
+            self.parent.text_edit.setPlainText(extractor_message)
         else:
             self.parent.text_edit.setText(
                 "{0} script file is missing or illegal!".format(file_name))
@@ -286,44 +323,52 @@ class SaveScript(object):
 
     def save(self, filename=None):
         logger.info(filename)
+        if not filename:
+            filename = self.parent.software_config.using_script
+
         if not self.parent.extractor_message:
             logger.warning("Empty Script")
 
-        self.parent.text_edit.text_change("")
+        self.parent.text_edit.text_change("")  # 添加脚本已保存提示
         message = self.parent.text_edit.toPlainText()
-        logger.info(message)
-        pattern = re.compile(r'>>(.*)')
-        message_list = re.findall(pattern=pattern, string=message)
-        logger.info(message_list)
+        # logger.info(message)
+        # ----------------------------------------------------------------
+        # save script config
+        script = LoadFromYaml().save_load(script_path=filename)
+        if script:
+            script["script config"] = message
+            SaveEvent().save_to_yaml_file(file_name=filename, script=script)
+        else:
+            logger.error("save failed")
 
-        # user_input_message = self.parent.extractor_message[0]
-        event_cls_list = self.parent.extractor_message[1]
-        user_input_event_list = self.parent.extractor_message[2]
+        # pattern = re.compile(r'>>(.*)')
+        # message_list = re.findall(pattern=pattern, string=message)
+        # logger.info(message_list)
 
-        if message_list:
-            message_list = [temp.strip() for temp in message_list]
+        # # user_input_message = self.parent.extractor_message[0]
+        # event_cls_list = self.parent.extractor_message[1]
+        # user_input_event_list = self.parent.extractor_message[2]
 
-        for i in range(len(user_input_event_list)):
-            try:
-                user_input_event_list[i].message = message_list[i]
-            except IndexError:
-                pass
+        # if message_list:
+        #     message_list = [temp.strip() for temp in message_list]
 
-        for user_input_event in user_input_event_list:
-            event_cls_list[event_cls_list.index(
-                user_input_event)] = user_input_event
+        # for i in range(len(user_input_event_list)):
+        #     try:
+        #         user_input_event_list[i].message = message_list[i]
+        #     except IndexError:
+        #         pass
 
-        if event_cls_list:
-            # pattern = re.compile(r'[\S]*.yaml')
-            # result = pattern.findall(filename)
-            logger.info(filename)
-            if not filename:
-                filename = self.parent.software_config.using_script
+        # for user_input_event in user_input_event_list:
+        #     event_cls_list[event_cls_list.index(
+        #         user_input_event)] = user_input_event
 
-            logger.info("filename{0}".format(filename))
-            event_dict_list = [event.events for event in event_cls_list]
-            SaveEvent.save_to_yaml_file(event_dict_list=event_dict_list,
-                                        file_name=filename)
+        # if event_cls_list:
+        #     # pattern = re.compile(r'[\S]*.yaml')
+        #     # result = pattern.findall(filename)
+        #     logger.info("filename{0}".format(filename))
+        #     event_dict_list = [event.events for event in event_cls_list]
+        #     script = {"script": event_dict_list, "delay": 1000}
+        #     SaveEvent.save_to_yaml_file(script=script, file_name=filename)
 
 
 class SaveAsDialog(QFileDialog):
@@ -361,6 +406,7 @@ class MainInterface(QMainWindow):
         self.stop_record_action = StopRecordAction(self)
         self.start_playback_action = StartPlayAction(self)
         self.stop_playback_action = StopPlayAction(self)
+        self.add_action = AddAction(self)
 
         self._recorder = Recorder(self)
         self._player = Player(self)
@@ -415,6 +461,7 @@ class MainInterface(QMainWindow):
         self.open_action.triggered.connect(self.file_dialog.load)
         self.save_action.triggered.connect(self.save_event.save)
         self.save_as_action.triggered.connect(self.save_as_dialog.save_as)
+        self.add_action.triggered.connect(self.file_dialog.add_script)
 
     def move_to_center(self):
         frame = self.frameGeometry()
