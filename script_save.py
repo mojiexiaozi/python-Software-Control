@@ -39,7 +39,7 @@ class SaveEvent(object):
                 file_name = "{0}.yaml".format(
                     datetime.now().strftime("%Y%m%d_%H%M%S"))
 
-            with open(file_name, 'w') as file_ref:
+            with open(file_name, 'w', encoding='utf-8') as file_ref:
                 yaml.safe_dump(script,
                                file_ref,
                                encoding='utf-8',
