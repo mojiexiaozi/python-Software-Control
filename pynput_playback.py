@@ -484,6 +484,8 @@ class Playback(Thread):
                     res = self.run_core(script_dict["script_name"],
                                         script_dict)
                     if res:
+                        print("playback done")
+                        self.this_queue.put('__CONTINUE__')
                         return None
                     sleep(eval(script_dict["delay"]))
 
@@ -498,7 +500,7 @@ class KeyboardListener(Thread):
         self._playback_queue = playback_queue
 
     def on_press(self, key):
-        if key == keyboard.Key.f11:
+        if key == keyboard.Key.f12:
             self._playback_queue.put("__PLAYBACK_QUIT__")
             print("user quit playback")
             return False

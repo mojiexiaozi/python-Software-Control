@@ -33,6 +33,7 @@ from script_save import SaveEvent
 from software_init import Init
 from log import Logger
 from pynput_playback import LoadFromYaml
+import functools
 
 logger = Logger().get_logger(__name__)
 
@@ -294,7 +295,7 @@ class FileDialog(QFileDialog):
                 if script_message:
                     add_message = script_message[0]
                 current_message = "{0}\n{1}".format(current_message,
-                                                    add_message)
+                                                     add_message)
                 self.parent.text_edit.setPlainText(current_message)
 
     def extractor(self, file_name):
@@ -486,5 +487,32 @@ class MainInterfaceLoad(object):
         sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
+def just_one_instance(func):
+    """
+    装饰器
+    如果有实例在跑则退出
+    :return
+    """
+    @functools.wraps(func)
+    def f(*args, **kwargs):
+        import socket
+        try:
+            s = socket.socket()
+            host = socket.gethostname()
+            logger.info(host)
+            s.bind((host, 9527))
+        except Exception as e:
+            logger.error(e)
+            logger.error("already has an instance")
+            return None
+        return func(*args, **kwargs)
+    return f
+
+
+@just_one_instance
+def main():
     MainInterfaceLoad()
+
+
+if __name__ == '__main__':
+    main()
