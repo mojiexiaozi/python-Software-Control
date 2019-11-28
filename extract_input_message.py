@@ -22,6 +22,9 @@ logger = Logger().get_logger(__name__)
 
 
 class KeyConstant(object):
+    """
+    Key Constant and Keymap
+    """
     def __init__(self):
         self._MESSAGE_KEY = [
             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c',
@@ -288,15 +291,17 @@ class GetEventMessage(object):
                 # logger.info(user_message)
                 message += user_message
                 message += '\n'
-        message_body = "<script>\n"
+        message_body = '*'*20 + 'Script' + '*'*20 + '\n'
+        message_body += "<script>\n"
         message_body += "delay=1\n"
         message_body += "script@{0}\n".format(script_path)
         message_body += message
         message_body += "</script>\n"
         logger.error(message_body)
-        message_head = "<head>\n"
-        message_head += "script_list = range(1)\n"
-        message_head += "script_index = script_list[1]\n"
+        message_head = '*'*20 + 'Head' + '*'*20 + '\n'
+        message_head += "<head>\n"
+        message_head += "script_run_count = 1\n"
+        # message_head += "script_index = script_list[1]\n"
         message_head += "script_delay = 1\n"
         message_head += "</head>\n"
         return message_head + message_body

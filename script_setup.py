@@ -33,7 +33,7 @@ def get_pattern_from_name(name: str):
 def get_head_val_string(script_string: str):
     SCRIPT_HEAD_VAR_STRING = {
         'script_delay': "",
-        'script_list': "",
+        'script_run_count': "",
         'script_index': "",
         'script_val1': "",
         'script_val2': "",

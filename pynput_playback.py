@@ -265,10 +265,10 @@ class Playback(Thread):
             raise UserWarning("script delay must be defined.")
 
         try:
-            self.script_list = head['script_list']
+            self.script_list = head['script_run_count']
         except KeyError:
-            logger.error("script list list be defined.")
-            raise UserWarning("script list must be defined.")
+            logger.error("script run count be defined.")
+            raise UserWarning("script run count must be defined.")
 
         try:
             self.script_val1 = head['script_val1']
@@ -477,7 +477,7 @@ class Playback(Thread):
         else:
             res = False
             logger.info(self.script_list)
-            for i in self.script_list:
+            for i in range(self.script_list):
                 self.script_index = i
                 logger.info(self.script_index)
                 for script_dict in self._script_conf["scripts"]:

@@ -18,9 +18,8 @@
 import sys
 import os
 import re
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QDesktopWidget,
-                             QMessageBox, QAction, QTextEdit, QFileDialog,
-                             QMenuBar, QToolBar)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QDesktopWidget, QMessageBox, QAction, QTextEdit, QFileDialog,
+                             QMenuBar, QToolBar, QInputDialog)
 from PyQt5.QtGui import QIcon, QFont
 from PyQt5 import QtGui
 from PyQt5.QtCore import QDir
@@ -34,6 +33,7 @@ from software_init import Init
 from log import Logger
 from pynput_playback import LoadFromYaml
 import functools
+import shutil
 
 logger = Logger().get_logger(__name__)
 
@@ -58,8 +58,7 @@ class OpenAction(QAction):
         self.setText('Open')
 
         self.setShortcut('Ctrl+O')
-        self.setStatusTip('Open script file.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Open script file.')  # self.triggered.connect(parent.close)
 
 
 class AddAction(QAction):
@@ -70,8 +69,7 @@ class AddAction(QAction):
         self.setText('Add')
 
         self.setShortcut('Ctrl+=')
-        self.setStatusTip('add script file.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('add script file.')  # self.triggered.connect(parent.close)
 
 
 class SaveAction(QAction):
@@ -82,8 +80,7 @@ class SaveAction(QAction):
         self.setText('Save')
 
         self.setShortcut('Ctrl+S')
-        self.setStatusTip('Save script file.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Save script file.')  # self.triggered.connect(parent.close)
 
 
 class SaveAsAction(QAction):
@@ -94,8 +91,7 @@ class SaveAsAction(QAction):
         self.setText('Save As')
 
         self.setShortcut('Ctrl+Shift+S')
-        self.setStatusTip('Save As Script File.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Save As Script File.')  # self.triggered.connect(parent.close)
 
 
 class StartRecordAction(QAction):
@@ -106,8 +102,7 @@ class StartRecordAction(QAction):
         self.setText('Start Record')
 
         self.setShortcut('Ctrl+R')
-        self.setStatusTip('Start record a script.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Start record a script.')  # self.triggered.connect(parent.close)
 
 
 class StopRecordAction(QAction):
@@ -118,8 +113,7 @@ class StopRecordAction(QAction):
         self.setText('Stop Record')
 
         self.setShortcut('F12')
-        self.setStatusTip('Stop record script.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Stop record script.')  # self.triggered.connect(parent.close)
 
 
 class StartPlayAction(QAction):
@@ -130,8 +124,7 @@ class StartPlayAction(QAction):
         self.setText('Start Play')
 
         self.setShortcut('Ctrl+P')
-        self.setStatusTip('Start play a script.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Start play a script.')  # self.triggered.connect(parent.close)
 
 
 class StopPlayAction(QAction):
@@ -142,27 +135,36 @@ class StopPlayAction(QAction):
         self.setText('Stop Play')
 
         self.setShortcut('F12')
-        self.setStatusTip('Stop Play Script.')
-        # self.triggered.connect(parent.close)
+        self.setStatusTip('Stop Play Script.')  # self.triggered.connect(parent.close)
+
+
+class AddValue(QAction):
+    def __init__(self, parent):
+        assert isinstance(parent, QMainWindow)
+        super().__init__(parent)
+        self.setIcon(QIcon('icon/add_value.svg'))
+        self.setText('Add Value')
+        self.setShortcut('Ctrl+.')
+        self.setStatusTip('Add New Variable')
 
 
 class MenuBar(QMenuBar):
     def __init__(self, parent):
         super().__init__(parent)
         self.file_menu = self.addMenu('File')
-        self.file_menu.addActions((parent.open_action, parent.add_action,
-                                   parent.save_action, parent.save_as_action))
+        self.file_menu.addActions((parent.open_action, parent.add_action, parent.save_action, parent.save_as_action))
         self.file_menu.setStatusTip("Script")
 
         # ------------------------------------------------------------------------------
         # motion menu
         self.record_menu = self.addMenu('Record')
-        self.record_menu.addActions(
-            (parent.start_record_action, parent.stop_record_action))
+        self.record_menu.addActions((parent.start_record_action, parent.stop_record_action))
 
         self.playback_menu = self.addMenu('Playback')
-        self.playback_menu.addActions(
-            (parent.start_playback_action, parent.stop_playback_action))
+        self.playback_menu.addActions((parent.start_playback_action, parent.stop_playback_action))
+
+        self.add_variable_menu = self.addMenu('Add Variable')
+        self.add_variable_menu.addAction(parent.add_variable_action)
 
         # -----------------------------------------------------------------
         # Exit menu bar
@@ -175,12 +177,13 @@ class ToolBar(QToolBar):
         super().__init__(parent)
         self.file_tool_bar = parent.addToolBar('File')
         self.file_tool_bar.addActions(
-            (parent.open_action, parent.add_action, parent.save_action,
-             parent.save_as_action))
+            (parent.open_action, parent.add_action, parent.save_action, parent.save_as_action))
 
         self.motion_tool_bar = parent.addToolBar('Motion')
-        self.motion_tool_bar.addActions(
-            (parent.start_record_action, parent.start_playback_action))
+        self.motion_tool_bar.addActions((parent.start_record_action, parent.start_playback_action))
+
+        self.ad_variable_tool_bar = parent.addToolBar('Add Variable')
+        self.ad_variable_tool_bar.addAction(parent.add_variable_action)
 
         self.exit_tool_bar = parent.addToolBar('Exit')
         self.exit_tool_bar.addAction(parent.exit_action)
@@ -199,8 +202,7 @@ class TextEdit(QTextEdit):
         self.text_change("")
 
     def text_change(self, tip_symbol='*'):
-        tip = "{0}{1}".format(tip_symbol,
-                              self.parent.software_config.using_script)
+        tip = "{0}{1}".format(tip_symbol, self.parent.software_config.using_script)
         self.setStatusTip(tip)
         logger.info(tip)
 
@@ -265,8 +267,7 @@ class FileDialog(QFileDialog):
 
     def load(self, file_name=""):
         assert isinstance(self.parent, MainInterface)
-        file_name = self.getOpenFileName(caption="Open Script",
-                                         filter='*.yaml')
+        file_name = self.getOpenFileName(caption="Open Script", filter='*.yaml')
         if file_name:
             file_name = os.path.split(file_name[0])[1]
             if file_name:
@@ -293,9 +294,8 @@ class FileDialog(QFileDialog):
                 script_message = pattern.findall(add_message)
                 logger.info(script_message)
                 if script_message:
-                    add_message = script_message[0]
-                current_message = "{0}\n{1}".format(current_message,
-                                                     add_message)
+                    add_message = '*'*20 + 'Script' + '*'*20 + '\n' + script_message[0]
+                current_message = "{0}{1}".format(current_message, add_message)
                 self.parent.text_edit.setPlainText(current_message)
 
     def extractor(self, file_name):
@@ -312,8 +312,7 @@ class FileDialog(QFileDialog):
             # logger.error(extractor_message)
             self.parent.text_edit.setPlainText(extractor_message)
         else:
-            self.parent.text_edit.setText(
-                "{0} script file is missing or illegal!".format(file_name))
+            self.parent.text_edit.setText("{0} script file is missing or illegal!".format(file_name))
         self.parent.extractor_message = extractor_message
 
 
@@ -342,35 +341,6 @@ class SaveScript(object):
         else:
             logger.error("save failed")
 
-        # pattern = re.compile(r'>>(.*)')
-        # message_list = re.findall(pattern=pattern, string=message)
-        # logger.info(message_list)
-
-        # # user_input_message = self.parent.extractor_message[0]
-        # event_cls_list = self.parent.extractor_message[1]
-        # user_input_event_list = self.parent.extractor_message[2]
-
-        # if message_list:
-        #     message_list = [temp.strip() for temp in message_list]
-
-        # for i in range(len(user_input_event_list)):
-        #     try:
-        #         user_input_event_list[i].message = message_list[i]
-        #     except IndexError:
-        #         pass
-
-        # for user_input_event in user_input_event_list:
-        #     event_cls_list[event_cls_list.index(
-        #         user_input_event)] = user_input_event
-
-        # if event_cls_list:
-        #     # pattern = re.compile(r'[\S]*.yaml')
-        #     # result = pattern.findall(filename)
-        #     logger.info("filename{0}".format(filename))
-        #     event_dict_list = [event.events for event in event_cls_list]
-        #     script = {"script": event_dict_list, "delay": 1000}
-        #     SaveEvent.save_to_yaml_file(script=script, file_name=filename)
-
 
 class SaveAsDialog(QFileDialog):
     def __init__(self, parent):
@@ -382,10 +352,11 @@ class SaveAsDialog(QFileDialog):
         self.setDirectory(QDir(parent.software_config.scripts_dir))
 
     def save_as(self):
-        file_name = self.getSaveFileName(caption="Save As", filter="*.yaml")[0]
-        logger.info(file_name)
-        if file_name:
-            self.parent.save_event.save(file_name)
+        new_file_name = self.getSaveFileName(caption="Save As", filter="*.yaml")[0]
+        logger.info(new_file_name)
+        if new_file_name:
+            shutil.copyfile(self.parent.software_config.using_script, new_file_name)
+            self.parent.save_event.save(new_file_name)
             logger.info("save done")
         else:
             logger.info("save as cancel")
@@ -408,6 +379,7 @@ class MainInterface(QMainWindow):
         self.start_playback_action = StartPlayAction(self)
         self.stop_playback_action = StopPlayAction(self)
         self.add_action = AddAction(self)
+        self.add_variable_action = AddValue(self)
 
         self._recorder = Recorder(self)
         self._player = Player(self)
@@ -420,9 +392,7 @@ class MainInterface(QMainWindow):
         # --------------------------------------------------
         # text edit
         self.text_edit = TextEdit(self)
-        self.script_head = "<head>\n{0}\n{1}\n{2}\n{3}\n</head>\n".format(
-            "script_list = range(1)", "script_index = 1",
-            "script_delay = 1000", "script_var1 = [10, 20, 30]")
+        self.script_head = ""
 
         # --------------------------------------------
         # load ui
@@ -463,6 +433,46 @@ class MainInterface(QMainWindow):
         self.save_action.triggered.connect(self.save_event.save)
         self.save_as_action.triggered.connect(self.save_as_dialog.save_as)
         self.add_action.triggered.connect(self.file_dialog.add_script)
+        self.add_variable_action.triggered.connect(self.add_variable)
+
+    def add_variable(self):
+        scripts = re.split(r'\n', self.text_edit.toPlainText())
+        text_cursor_number = self.text_edit.textCursor().blockNumber()
+        try:
+            head_end = scripts.index('</head>')
+        except ValueError:
+            head_end = -1
+        if text_cursor_number < head_end:
+            item = self.get_item()
+            if item:
+                scripts.insert(text_cursor_number + 1, '{0} = [1, 2, 3]'.format(item))
+        elif text_cursor_number > head_end:
+            if re.findall(r"input@(.*)", scripts[text_cursor_number]):
+                item = self.get_item()
+                if item:
+                    head, variable = re.split('[ ]*>>[ ]*', scripts[text_cursor_number])
+                    scripts[text_cursor_number] = head + ' >> ' + '{0}[script_index]'.format(item)
+
+        script_temp = r""
+        for i in scripts:
+            script_temp = script_temp + i + '\n'
+
+        if script_temp:
+            self.text_edit.setPlainText(script_temp)
+        # logger.info(script_temp)
+
+    def get_item(self):
+        items = ['script_val1', 'script_val2',
+                 'script_val3', 'script_val4',
+                 'script_val5', 'script_val6',
+                 'script_val7', 'script_val8',
+                 'script_val9', 'script_val10']
+        item, ok = QInputDialog.getItem(self, 'Choose Script Variable',
+                                        'script variable items', items, 0, False)
+        if ok and item:
+            return item
+        else:
+            return None
 
     def move_to_center(self):
         frame = self.frameGeometry()
@@ -471,13 +481,15 @@ class MainInterface(QMainWindow):
         self.move(frame.topLeft())
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        reply = QMessageBox().question(self, "Quit?", "Are you sure to quit?",
-                                       QMessageBox.Yes | QMessageBox.No,
+        event.accept()
+        """
+        reply = QMessageBox().question(self, "Quit?", "Are you sure to quit?", QMessageBox.Yes | QMessageBox.No,
                                        QMessageBox.No)
         if reply == QMessageBox.Yes:
             event.accept()
         else:
             event.ignore()
+        """
 
 
 class MainInterfaceLoad(object):
@@ -493,6 +505,7 @@ def just_one_instance(func):
     如果有实例在跑则退出
     :return
     """
+
     @functools.wraps(func)
     def f(*args, **kwargs):
         import socket
@@ -506,6 +519,7 @@ def just_one_instance(func):
             logger.error("already has an instance")
             return None
         return func(*args, **kwargs)
+
     return f
 
 

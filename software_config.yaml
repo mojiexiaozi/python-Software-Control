@@ -24,7 +24,7 @@ logging config:
       class: logging.FileHandler
       filename: debug.log
       formatter: simple
-      level: DEBUG
+      level: WARNING
   loggers:
     simpleExample:
       handlers:
@@ -36,10 +36,9 @@ logging config:
   root:
     handlers:
     - console
-    - file
     - error
     level: DEBUG
   version: 1
 scripts dir: script
-software dir: e:/CASIProject/CASI003/CASI003
-using script: 20190912_152510.yaml
+software dir: E:/CASIProject/CASI003/CASI003
+using script: test.yaml
